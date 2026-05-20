@@ -1377,10 +1377,15 @@ function renderGradeDistChart() {
   // Count grades from finalTotal
   var gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
   var total = 0;
+  var scoreLabel = 'Final Score';
   subs.forEach(function(sid) {
     var eData = evalStore[sid] || {};
-    var score = eData.finalTotal || null;
+    // ใช้ Final ก่อน ถ้าไม่มีใช้ S-Level ถ้าไม่มีใช้ Self
+    var score = eData.finalTotal || eData.sTotal || eData.selfTotal || null;
     if (!score) return;
+    if (eData.finalTotal) scoreLabel = 'Final Score';
+    else if (eData.sTotal) scoreLabel = 'S-Level Score';
+    else scoreLabel = 'Self Score';
     total++;
     if (score >= 4.21) gradeCounts.A++;
     else if (score >= 3.41) gradeCounts.B++;
@@ -1391,8 +1396,9 @@ function renderGradeDistChart() {
 
   var chartDiv = document.getElementById('home-grade-chart');
   if (!chartDiv) return;
-  chartDiv.style.display = total > 0 ? '' : 'none';
-  if (total === 0) return;
+  // แสดงเสมอ ถ้าไม่มีข้อมูลแสดง 0 ทั้งหมด
+  chartDiv.style.display = '';
+  if (total === 0) scoreLabel = currentLang === 'th' ? 'ยังไม่มีข้อมูล' : 'No data yet';
 
   var countEl = document.getElementById('home-chart-count');
   if (countEl) countEl.textContent = (currentLang === 'th' ? 'Final Score: ' + total + ' คน' : 'Final Score: ' + total + ' employees');
