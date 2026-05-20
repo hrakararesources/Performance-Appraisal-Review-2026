@@ -260,7 +260,7 @@ textarea{resize:vertical;min-height:70px;}
                alt="Akara Resources" />
         </div>
         <div style="margin-top:4px;">
-          <div style="font-size:10px;opacity:0.65;color:white;letter-spacing:0.5px;">Performance Appraisal Review 2026</div>
+          <div style="font-size:10px;opacity:0.65;color:white;letter-spacing:0.5px;">Performance Appraisal 2026</div>
         </div>
       </div>
     </div>
@@ -1211,8 +1211,8 @@ const PAGE_TITLES={
   'page-hr-settings':{th:'ตั้งค่า',en:'Settings'},'page-proposal':{th:'แบบฟอร์มเสนอปรับ',en:'Proposal Form'},
 };
 function showPage(pid){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  const pg=document.getElementById(pid);if(pg){pg.classList.add('active');pg.classList.remove('hidden');}
+  document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
+  const pg=document.getElementById(pid);if(pg){pg.classList.add('active');pg.classList.remove('hidden');pg.style.display='flex';}
   const titleObj=PAGE_TITLES[pid]||{th:pid,en:pid};
   document.getElementById('topbar-title').textContent=titleObj[currentLang];
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
