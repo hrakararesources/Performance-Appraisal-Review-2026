@@ -90,12 +90,12 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);min
 .lang-btn{padding:3px 10px;border-radius:18px;font-size:11px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.6);transition:all .15s;border:none;background:transparent;}
 .lang-btn.active{background:var(--accent);color:white;}
 
-.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow-y:auto;}
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;height:100vh;overflow:hidden;}
 .topbar{background:white;border-bottom:1px solid var(--border);padding:0 1.5rem;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:50;}
 .topbar-title{font-size:16px;font-weight:600;color:var(--primary);}
 .notif-btn{position:relative;background:var(--bg);border:1px solid var(--border);border-radius:8px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
 .notif-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;background:var(--danger);border-radius:50%;font-size:10px;color:white;display:flex;align-items:center;justify-content:center;border:2px solid white;}
-.page{display:none;flex-direction:column;gap:1.25rem;padding:1.5rem;overflow-y:auto;}
+.page{display:none;flex-direction:column;gap:1.25rem;padding:1.5rem;overflow-y:auto;height:100%;box-sizing:border-box;}
 .page.active{display:flex;}
 
 /* CARDS */
