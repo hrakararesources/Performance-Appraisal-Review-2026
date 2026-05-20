@@ -2529,7 +2529,19 @@ window.addEventListener('beforeunload', function(e) {
 });
 
 // Init
-window.addEventListener('DOMContentLoaded',()=>{ applyTranslations(); loadFromSheets(); });
+window.addEventListener('DOMContentLoaded',()=>{
+  // Move any pages that ended up outside screen-app back inside
+  var screenApp = document.getElementById('screen-app');
+  var mainDiv = screenApp ? screenApp.querySelector('.main') : null;
+  var target = mainDiv || screenApp;
+  if (target) {
+    document.querySelectorAll('body > .page').forEach(function(p) {
+      target.appendChild(p);
+    });
+  }
+  applyTranslations();
+  loadFromSheets();
+});
 
 
 </script>
