@@ -698,6 +698,96 @@ textarea{resize:vertical;min-height:70px;}
 </div>
 </div>
 
+<!-- ── Proposal Form Page ───────────────────────────────── -->
+<div id="page-proposal" class="page hidden">
+  <div class="page-header" style="display:flex;align-items:center;gap:12px;">
+    <button onclick="showPage('page-eval-others')" class="btn btn-outline btn-sm">← Back</button>
+    <h2 id="proposal-title">Employee Promotion / Special Adjustment Proposal</h2>
+  </div>
+
+  <!-- PART A -->
+  <div class="card">
+    <div class="card-title" style="color:var(--primary);font-size:15px;">PART A — Employee Information</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Employee ID</label><div id="pa-emp-id" style="padding:8px;background:var(--bg);border-radius:6px;font-family:monospace;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Name - Surname</label><div id="pa-name" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Division</label><div id="pa-dept" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Department / Section</label><div id="pa-position" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Date of Hire</label><div id="pa-hire" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Year of Service</label><div id="pa-tenure" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Last Promotion (Year / พ.ศ.)</label>
+        <input id="pa-last-promo" type="text" placeholder="เช่น 2566" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
+      </div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">KPI Score (Final)</label><div id="pa-score" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+    </div>
+  </div>
+
+  <!-- PART B -->
+  <div class="card">
+    <div class="card-title" style="color:var(--primary);font-size:15px;">PART B — Proposal Type</div>
+    <div style="display:flex;gap:20px;margin-top:12px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+        <input type="radio" name="proposal-type" id="pb-special" value="special_adjustment" onchange="toggleProposalType()" checked>
+        Special Adjustment (Provide info for PART D only)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
+        <input type="radio" name="proposal-type" id="pb-promotion" value="promotion" onchange="toggleProposalType()">
+        Promotion (Provide all sections until PART E)
+      </label>
+    </div>
+    <div id="pb-position-block" style="display:none;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Current Position</label><div id="pb-current-pos" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Proposal Position (New Position)</label>
+        <input id="pb-new-pos" type="text" placeholder="New position title" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- PART C (Promotion only) -->
+  <div class="card" id="pc-block" style="display:none;">
+    <div class="card-title" style="color:var(--primary);font-size:15px;">PART C — Key Strengths and Areas to be Developed</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Key Strengths / จุดแข็ง</label>
+        <textarea id="pc-strengths" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Describe key strengths..."></textarea>
+      </div>
+      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">To be Developed / จุดที่ควรพัฒนา</label>
+        <textarea id="pc-develop" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Areas for development..."></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART D -->
+  <div class="card">
+    <div class="card-title" style="color:var(--primary);font-size:15px;">PART D — Achievement</div>
+    <div style="margin-top:12px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">I - Achievement / ผลงานที่โดดเด่น</label>
+      <textarea id="pd-achievement" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="Please describe or attach relevant documents..."></textarea>
+    </div>
+    <div style="margin-top:12px;" id="pd-project-block">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">II - Special Project / Initiative</label>
+      <textarea id="pd-project" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="Special projects or initiatives..."></textarea>
+    </div>
+  </div>
+
+  <!-- PART E (Promotion only) -->
+  <div class="card" id="pe-block" style="display:none;">
+    <div class="card-title" style="color:var(--primary);font-size:15px;">PART E — Expectation After Promotion</div>
+    <div style="margin-top:12px;">
+      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">What will be new roles or new assignments after promotion?</label>
+      <textarea id="pe-expectation" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="New roles, responsibilities, and organizational structure changes..."></textarea>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div style="display:flex;gap:12px;justify-content:flex-end;padding-bottom:2rem;">
+    <button onclick="showPage('page-eval-others')" class="btn btn-outline">ยกเลิก / Cancel</button>
+    <button onclick="saveProposalForm()" class="btn btn-primary" style="background:var(--warning);border-color:var(--warning);">💾 บันทึก / Save</button>
+    <button onclick="generateProposalPDF()" class="btn btn-primary">📄 สร้าง PDF / Generate PDF</button>
+  </div>
+</div>
+
+
+
 <script>
 
 // ══════════════════════════════════════════
@@ -2443,94 +2533,6 @@ window.addEventListener('DOMContentLoaded',()=>{ applyTranslations(); loadFromSh
 
 
 </script>
-
-<!-- ── Proposal Form Page ───────────────────────────────── -->
-<div id="page-proposal" class="page hidden">
-  <div class="page-header" style="display:flex;align-items:center;gap:12px;">
-    <button onclick="showPage('page-eval-others')" class="btn btn-outline btn-sm">← Back</button>
-    <h2 id="proposal-title">Employee Promotion / Special Adjustment Proposal</h2>
-  </div>
-
-  <!-- PART A -->
-  <div class="card">
-    <div class="card-title" style="color:var(--primary);font-size:15px;">PART A — Employee Information</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Employee ID</label><div id="pa-emp-id" style="padding:8px;background:var(--bg);border-radius:6px;font-family:monospace;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Name - Surname</label><div id="pa-name" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Division</label><div id="pa-dept" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Department / Section</label><div id="pa-position" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Date of Hire</label><div id="pa-hire" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Year of Service</label><div id="pa-tenure" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Last Promotion (Year / พ.ศ.)</label>
-        <input id="pa-last-promo" type="text" placeholder="เช่น 2566" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
-      </div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">KPI Score (Final)</label><div id="pa-score" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-    </div>
-  </div>
-
-  <!-- PART B -->
-  <div class="card">
-    <div class="card-title" style="color:var(--primary);font-size:15px;">PART B — Proposal Type</div>
-    <div style="display:flex;gap:20px;margin-top:12px;">
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-        <input type="radio" name="proposal-type" id="pb-special" value="special_adjustment" onchange="toggleProposalType()" checked>
-        Special Adjustment (Provide info for PART D only)
-      </label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:14px;">
-        <input type="radio" name="proposal-type" id="pb-promotion" value="promotion" onchange="toggleProposalType()">
-        Promotion (Provide all sections until PART E)
-      </label>
-    </div>
-    <div id="pb-position-block" style="display:none;margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Current Position</label><div id="pb-current-pos" style="padding:8px;background:var(--bg);border-radius:6px;font-size:13px;"></div></div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Proposal Position (New Position)</label>
-        <input id="pb-new-pos" type="text" placeholder="New position title" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;">
-      </div>
-    </div>
-  </div>
-
-  <!-- PART C (Promotion only) -->
-  <div class="card" id="pc-block" style="display:none;">
-    <div class="card-title" style="color:var(--primary);font-size:15px;">PART C — Key Strengths and Areas to be Developed</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px;">
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">Key Strengths / จุดแข็ง</label>
-        <textarea id="pc-strengths" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Describe key strengths..."></textarea>
-      </div>
-      <div><label style="font-size:12px;color:var(--text-muted);font-weight:600;">To be Developed / จุดที่ควรพัฒนา</label>
-        <textarea id="pc-develop" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;" placeholder="Areas for development..."></textarea>
-      </div>
-    </div>
-  </div>
-
-  <!-- PART D -->
-  <div class="card">
-    <div class="card-title" style="color:var(--primary);font-size:15px;">PART D — Achievement</div>
-    <div style="margin-top:12px;">
-      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">I - Achievement / ผลงานที่โดดเด่น</label>
-      <textarea id="pd-achievement" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="Please describe or attach relevant documents..."></textarea>
-    </div>
-    <div style="margin-top:12px;" id="pd-project-block">
-      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">II - Special Project / Initiative</label>
-      <textarea id="pd-project" rows="4" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="Special projects or initiatives..."></textarea>
-    </div>
-  </div>
-
-  <!-- PART E (Promotion only) -->
-  <div class="card" id="pe-block" style="display:none;">
-    <div class="card-title" style="color:var(--primary);font-size:15px;">PART E — Expectation After Promotion</div>
-    <div style="margin-top:12px;">
-      <label style="font-size:12px;color:var(--text-muted);font-weight:600;">What will be new roles or new assignments after promotion?</label>
-      <textarea id="pe-expectation" rows="5" style="width:100%;padding:8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;resize:vertical;margin-top:6px;" placeholder="New roles, responsibilities, and organizational structure changes..."></textarea>
-    </div>
-  </div>
-
-  <!-- Actions -->
-  <div style="display:flex;gap:12px;justify-content:flex-end;padding-bottom:2rem;">
-    <button onclick="showPage('page-eval-others')" class="btn btn-outline">ยกเลิก / Cancel</button>
-    <button onclick="saveProposalForm()" class="btn btn-primary" style="background:var(--warning);border-color:var(--warning);">💾 บันทึก / Save</button>
-    <button onclick="generateProposalPDF()" class="btn btn-primary">📄 สร้าง PDF / Generate PDF</button>
-  </div>
-</div>
 
 <!-- ── Import Modal ──────────────────────────────────────── -->
 <div id="modal-import-result" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:1000;overflow-y:auto;padding:20px;">
