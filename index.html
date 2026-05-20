@@ -403,7 +403,7 @@ textarea{resize:vertical;min-height:70px;}
       <div id="home-hr-summary" style="display:none;"></div>
       <div id="home-grade-chart" class="card" style="display:none;max-height:380px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
-          <div class="card-title" style="margin:0;" id="t-grade-dist-title">Grade Distribution — พนักงานในสังกัด</div>
+          <div class="card-title" style="margin:0;" id="t-grade-dist-title">Grade Distribution</div>
           <span id="home-chart-count" style="font-size:12px;color:var(--text-muted);"></span>
         </div>
         <canvas id="grade-dist-canvas" style="max-height:220px;"></canvas>
@@ -1469,6 +1469,19 @@ function renderGradeDistChart() {
   var smoothTarget = [0, 10, 15, 20, 30, 40, 30, 20, 15, 10, 0];
   var smoothActual = [0, actualPct[0], (actualPct[0]+actualPct[1])/2, actualPct[1], (actualPct[1]+actualPct[2])/2,
                       actualPct[2], (actualPct[2]+actualPct[3])/2, actualPct[3], (actualPct[3]+actualPct[4])/2, actualPct[4], 0];
+
+  // Set title dynamically with dept name
+  var titleEl = document.getElementById('t-grade-dist-title');
+  if (titleEl) {
+    var deptName = '—';
+    if (subs.length > 0) {
+      var firstSub = USERS[subs[0]];
+      if (firstSub && firstSub.dept) {
+        deptName = firstSub.dept[currentLang] || firstSub.dept.th;
+      }
+    }
+    titleEl.textContent = 'Grade Distribution — ' + deptName;
+  }
 
   var canvas = document.getElementById('grade-dist-canvas');
   if (!canvas) return;
