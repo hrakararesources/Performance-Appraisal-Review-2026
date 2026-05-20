@@ -1356,8 +1356,15 @@ function showPage(pid){
 // ── HOME ──
 function renderHome(){
   const u=currentUser,eData=evalStore[u.id]||{};
-  // render grade dist chart for Final approvers
-  setTimeout(function(){ if(currentUser && currentUser.isFinal) renderGradeDistChart(); }, 100);
+  // render grade dist chart only for isFinal=true users
+  setTimeout(function(){
+    var chartDiv = document.getElementById('home-grade-chart');
+    if (currentUser && currentUser.isFinal) {
+      renderGradeDistChart();
+    } else {
+      if (chartDiv) chartDiv.style.display = 'none';
+    }
+  }, 100);
   // render HR summary for HR+Final users
   var hrSummaryDiv = document.getElementById('home-hr-summary');
   if (hrSummaryDiv) {
@@ -1426,8 +1433,15 @@ var gradeDistChartInstance = null;
 function renderGradeDistChart() {
   if (!currentUser || !currentUser.isFinal) return;
 
-  var subs = SUBORDINATES[currentUser.id] || [];
-  if (subs.length === 0) return;
+  // ใช้เฉพาะพนักงานที่มี finalId ตรงกับ currentUser เท่านั้น
+  var subs = Object.keys(USERS).filter(function(id) {
+    return USERS[id].finalId === currentUser.id && !USERS[id].inactive;
+  });
+  if (subs.length === 0) {
+    var chartDiv2 = document.getElementById('home-grade-chart');
+    if (chartDiv2) chartDiv2.style.display = 'none';
+    return;
+  }
 
   // Count grades from finalTotal
   var gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
