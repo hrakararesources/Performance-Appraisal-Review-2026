@@ -453,6 +453,10 @@ textarea{resize:vertical;min-height:70px;}
       <div class="card" style="background:var(--bg);" id="sub-slevel-card">
         <div class="card-title" style="margin-bottom:.75rem;font-size:14px;" id="sub-slevel-title">ผลการประเมินของหัวหน้างาน (S-Level)</div>
         <div id="sub-slevel-summary"></div>
+        <div id="sub-slevel-comment" style="display:none;margin-top:.75rem;background:var(--bg);border-radius:8px;padding:10px 14px;border-left:3px solid var(--primary);">
+          <div style="font-size:11px;font-weight:600;color:var(--text-muted);letter-spacing:.5px;margin-bottom:4px;" data-th="ความคิดเห็นของหัวหน้างาน" data-en="Supervisor Comment">ความคิดเห็นของหัวหน้างาน</div>
+          <p style="margin:0;font-size:13px;color:var(--text);white-space:pre-wrap;"></p>
+        </div>
         <div id="sub-slevel-sections" style="margin-top:1rem;"></div>
       </div>
       <div id="sub-eval-sections"></div>
@@ -1435,7 +1439,6 @@ function openSubEval(subId){
     ?("<div style=\"display:flex;align-items:center;gap:12px;\"><div style=\"width:48px;height:48px;border-radius:50%;background:"+(sg.bg)+";color:"+(sg.color)+";display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;\">"+(sg.letter)+"</div><div><div style=\"font-weight:600;\">"+(sg.label)+"</div><div style=\"font-size:13px;color:var(--text-muted);\">"+(t('score'))+": "+(selfResult.toFixed(2))+"</div></div></div>")
     :("<p style=\"color:var(--text-muted);\">"+(currentLang==='th'?'ยังไม่มีข้อมูล Self Eval':'No self-evaluation data')+"</p>");
   buildEvalSections('sub-eval-sections',sub.level,subScores,'sub');
-  document.getElementById('special-adjust-block').style.display=currentUser.isFinal?'block':'none';
   const chk=document.getElementById('chk-special');if(chk)chk.checked=false;
   const rb=document.getElementById('special-reason-box');if(rb)rb.style.display='none';
   showPage('page-eval-sub');
