@@ -224,6 +224,7 @@ textarea{resize:vertical;min-height:70px;}
 .chip-new{background:#e8f1fa;color:#1a3a5c;}
 .chip-dup{background:#ede7f6;color:#5e35b1;}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 <div class="toast-container" id="toast-container"></div>
@@ -395,6 +396,14 @@ textarea{resize:vertical;min-height:70px;}
     <!-- HOME -->
     <div class="page active" id="page-home">
       <div id="home-alerts"></div>
+      <div id="home-grade-chart" class="card" style="display:none;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div class="card-title" style="margin:0;" id="t-grade-dist-title">Grade Distribution — พนักงานในสังกัด</div>
+          <span id="home-chart-count" style="font-size:12px;color:var(--text-muted);"></span>
+        </div>
+        <canvas id="grade-dist-canvas" height="200"></canvas>
+        <div id="grade-dist-legend" style="display:flex;justify-content:center;gap:16px;margin-top:12px;flex-wrap:wrap;"></div>
+      </div>
       <div class="stat-grid" id="home-stats"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
         <div class="card">
@@ -1341,6 +1350,8 @@ function showPage(pid){
 // ── HOME ──
 function renderHome(){
   const u=currentUser,eData=evalStore[u.id]||{};
+  // render grade dist chart for Final approvers
+  setTimeout(function(){ if(currentUser && currentUser.isFinal) renderGradeDistChart(); }, 100);
   const alerts=document.getElementById('home-alerts');alerts.innerHTML='';
   if(!eData.selfTotal){alerts.innerHTML=("<div class=\"alert alert-warn\">"+(t('not-eval-yet'))+"</div>");}
   const stats=document.getElementById('home-stats');
@@ -1352,6 +1363,136 @@ function renderHome(){
   tl.innerHTML=("\n    <div class=\"tl-item\"><div class=\"tl-dot done\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('hr-open-round'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(t('done'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSelf?'done':'active')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('self-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSelf?t('done')+' – '+eData.selfTotal.toFixed(2):t('wait'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSEval?'done':hasSelf?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('s-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSEval?t('done'):t('wait-eval'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasFinal?'done':hasSEval?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('final-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasFinal?t('done')+' – '+t('grade')+' '+getGrade(eData.finalTotal).letter:t('wait'))+"</div></div></div>\n  ");
   const gc=document.getElementById('grade-criteria');
   gc.innerHTML=GRADES.map(g=>("\n    <div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">\n      <div style=\"width:36px;height:36px;border-radius:50%;background:"+(g.bg)+";color:"+(g.color)+";display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0;\">"+(g.letter)+"</div>\n      <div style=\"flex:1;\"><div style=\"font-size:13px;font-weight:600;\">"+(g.label)+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(g.min.toFixed(2))+" – "+(g.max.toFixed(2))+"</div></div>\n      <div style=\"flex:1;\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(g.max*20)+"%;background:"+(g.bar)+";\"></div></div></div>\n    </div>")).join('');
+}
+
+// ── GRADE DISTRIBUTION CHART ─────────────────────────────────
+var gradeDistChartInstance = null;
+
+function renderGradeDistChart() {
+  if (!currentUser || !currentUser.isFinal) return;
+
+  var subs = SUBORDINATES[currentUser.id] || [];
+  if (subs.length === 0) return;
+
+  // Count grades from finalTotal
+  var gradeCounts = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+  var total = 0;
+  subs.forEach(function(sid) {
+    var eData = evalStore[sid] || {};
+    var score = eData.finalTotal || null;
+    if (!score) return;
+    total++;
+    if (score >= 4.21) gradeCounts.A++;
+    else if (score >= 3.41) gradeCounts.B++;
+    else if (score >= 2.61) gradeCounts.C++;
+    else if (score >= 1.81) gradeCounts.D++;
+    else gradeCounts.E++;
+  });
+
+  var chartDiv = document.getElementById('home-grade-chart');
+  if (!chartDiv) return;
+  chartDiv.style.display = total > 0 ? '' : 'none';
+  if (total === 0) return;
+
+  var countEl = document.getElementById('home-chart-count');
+  if (countEl) countEl.textContent = (currentLang === 'th' ? 'Final Score: ' + total + ' คน' : 'Final Score: ' + total + ' employees');
+
+  // Build smooth bell curve data points
+  var grades = ['A', 'B', 'C', 'D', 'E'];
+  var labels = ['A', 'B', 'C', 'D', 'E'];
+  var actualPct = grades.map(function(g) { return total > 0 ? Math.round(gradeCounts[g] / total * 100) : 0; });
+  var targetPct = [10, 20, 40, 20, 10];
+
+  // Smooth bell curve points (interpolate between grades)
+  var smoothLabels = ['', 'A', '', 'B', '', 'C', '', 'D', '', 'E', ''];
+  var smoothTarget = [0, 10, 15, 20, 30, 40, 30, 20, 15, 10, 0];
+  var smoothActual = [0, actualPct[0], (actualPct[0]+actualPct[1])/2, actualPct[1], (actualPct[1]+actualPct[2])/2,
+                      actualPct[2], (actualPct[2]+actualPct[3])/2, actualPct[3], (actualPct[3]+actualPct[4])/2, actualPct[4], 0];
+
+  var canvas = document.getElementById('grade-dist-canvas');
+  if (!canvas) return;
+
+  if (gradeDistChartInstance) {
+    gradeDistChartInstance.destroy();
+    gradeDistChartInstance = null;
+  }
+
+  var ctx = canvas.getContext('2d');
+  gradeDistChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: smoothLabels,
+      datasets: [
+        {
+          label: currentLang === 'th' ? '% เป้าหมาย (Bell Curve)' : '% Target (Bell Curve)',
+          data: smoothTarget,
+          borderColor: '#bdc3c7',
+          borderWidth: 2,
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0.4,
+          fill: false,
+        },
+        {
+          label: currentLang === 'th' ? '% จริง (Final Score)' : '% Actual (Final Score)',
+          data: smoothActual,
+          borderColor: '#F5B731',
+          borderWidth: 3,
+          pointRadius: function(ctx) { return ctx.dataIndex % 2 === 1 ? 5 : 0; },
+          pointBackgroundColor: '#F5B731',
+          tension: 0.4,
+          fill: {
+            target: 'origin',
+            above: 'rgba(245,183,49,0.12)',
+          },
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (ctx.dataIndex % 2 !== 1) return null;
+              var grade = labels[Math.floor(ctx.dataIndex / 2)];
+              return grade + ': ' + ctx.parsed.y + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { display: false },
+          ticks: { font: { size: 13 } }
+        },
+        y: {
+          min: 0,
+          max: 50,
+          ticks: {
+            callback: function(v) { return v + '%'; },
+            font: { size: 11 }
+          },
+          grid: { color: 'rgba(0,0,0,0.06)' }
+        }
+      }
+    }
+  });
+
+  // Legend
+  var legend = document.getElementById('grade-dist-legend');
+  if (legend) {
+    var gradeColors = { A: '#1e8449', B: '#1565c0', C: '#e67e22', D: '#e74c3c', E: '#c0392b' };
+    var gradeLabels = { A: 'Role Model', B: 'Proactive', C: 'Reliable', D: 'Developing', E: 'Unsatisfactory' };
+    legend.innerHTML = grades.map(function(g) {
+      return '<div style="display:flex;align-items:center;gap:5px;font-size:12px;">'
+        + '<span style="width:12px;height:12px;border-radius:50%;background:'+gradeColors[g]+';display:inline-block;"></span>'
+        + '<span style="color:'+gradeColors[g]+';font-weight:600;">'+g+'</span>'
+        + '<span style="color:var(--text-muted);">'+gradeLabels[g]+' ('+actualPct[grades.indexOf(g)]+'%)</span>'
+        + '</div>';
+    }).join('');
+  }
 }
 
 // ── SELF EVAL ──
