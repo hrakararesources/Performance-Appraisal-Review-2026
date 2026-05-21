@@ -645,9 +645,18 @@ textarea{resize:vertical;min-height:70px;}
             <span id="desc-import-status" style="font-size:12px;color:var(--text-muted);"></span>
             <button class="btn btn-sm btn-outline" onclick="exportScoreDescCSV()">⬇ Export Excel</button>
             <label class="btn btn-sm btn-outline" style="cursor:pointer;margin:0;">
-              ⬆ Import Excel
-              <input type="file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importScoreDescFile(event.target)">
+              ⬆ Import (ทุก Level)
+              <input type="file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importScoreDescFile(event.target, null)">
             </label>
+            <div style="display:flex;align-items:center;gap:4px;">
+              <select id="import-level-select" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit;">
+                <option value="">เลือก Level</option>
+              </select>
+              <label class="btn btn-sm btn-outline" style="cursor:pointer;margin:0;" id="import-single-label">
+                ⬆ Import Level นี้
+                <input type="file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importScoreDescFile(event.target, document.getElementById('import-level-select').value)">
+              </label>
+            </div>
             <button class="btn btn-sm btn-accent" onclick="saveScoreDescs()" id="t-save-desc-btn">บันทึกทั้งหมด</button>
           </div>
         </div>
@@ -2299,9 +2308,12 @@ function exportScoreDescCSV() {
   showToast('Export สำเร็จ','success');
 }
 
-function importScoreDescFile(input) {
+function importScoreDescFile(input, levelFilter) {
   if (!input || !input.files || input.files.length === 0) {
     showToast('กรุณาเลือกไฟล์',''); return;
+  }
+  if (levelFilter === '') {
+    showToast('กรุณาเลือก Level ก่อน',''); return;
   }
   var file = input.files[0];
   if (!file) return;
@@ -2320,6 +2332,8 @@ function importScoreDescFile(input) {
         var si  = parseInt(cols[1]);
         var ii  = parseInt(cols[4]);
         if (isNaN(si) || isNaN(ii)) continue;
+        // Filter by level if specified
+        if (levelFilter && lk !== levelFilter) continue;
         [1,2,3,4,5].forEach(function(score, idx) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
           if (!SCORE_DESCS[k]) SCORE_DESCS[k] = {th:'',en:''};
@@ -2331,8 +2345,22 @@ function importScoreDescFile(input) {
       // Update UI immediately
       renderDescEditor();
       showToast('Import สำเร็จ '+count+' รายการ — กำลังบันทึกลง Sheets...','success');
-      // Save to Sheets in background
-      gasPost('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)}).then(function(r){
+      // Save to Sheets - if single level, save only that level
+      var savePromise;
+      if (levelFilter) {
+        // Extract only this level's data
+        var levelDescs = {};
+        Object.keys(SCORE_DESCS).forEach(function(k) {
+          if (k.split('|')[0] === levelFilter) levelDescs[k] = SCORE_DESCS[k];
+        });
+        savePromise = gasRun('saveScoreDescByLevel', {
+          level_key: levelFilter,
+          desc_json: JSON.stringify(levelDescs)
+        });
+      } else {
+        savePromise = gasPost('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)});
+      }
+      savePromise.then(function(r){
         showToast('✅ บันทึกลง Sheets เรียบร้อย ('+count+' รายการ)','success');
         // Show permanent status in UI
         var statusEl = document.getElementById('desc-import-status');
@@ -2374,6 +2402,13 @@ function parseCSVLine(line) {
 }
 
 function initDescEditor(){
+  // Populate level select for import
+  var sel = document.getElementById('import-level-select');
+  if (sel) {
+    var levels0 = Object.keys(EVAL_DATA);
+    sel.innerHTML = '<option value="">เลือก Level</option>' +
+      levels0.map(function(lk) { return '<option value="'+lk+'">'+lk+'</option>'; }).join('');
+  }
   const levels=Object.keys(EVAL_DATA);
   const tabs=document.getElementById('editor-level-tabs');
   tabs.innerHTML=levels.map(lk=>("<button onclick=\"setEditorLevel('"+(lk)+"')\" id=\"etab-"+(lk.replace(/[^a-z0-9]/gi,'_'))+"\" class=\"btn btn-sm "+(editorLevel===lk?'btn-primary':'btn-outline')+"\">"+(lk)+"</button>")).join('');
@@ -3132,46 +3167,71 @@ function generateProposalPDF() {
 
 // ── GAS POST (for large payloads) ───────────────────────────
 function gasPost(fnName, data) {
-  // Use fetch with no-cors for large data that exceeds JSONP URL limit
-  // Since no-cors doesn't return response, we use a workaround:
-  // Split large JSON into chunks and send via multiple JSONP calls
+  // For saveScoreDescConfig: split by level prefix and save per-level
+  if (fnName === 'saveScoreDescConfig' && data.desc_json) {
+    return gasPostScoreDescByLevel(data);
+  }
+  // For saveTopicConfig: use chunked approach (smaller data)
   var jsonStr = JSON.stringify(data);
-  var chunkSize = 1500; // safe chunk size in base64
-  
-  if (jsonStr.length <= 3000) {
-    // Small enough for JSONP
+  var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+  var chunkSize = 1400;
+  if (b64.length <= chunkSize) {
     return gasRun(fnName, data);
   }
-  
-  // For large data: send in chunks
-  var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
   var chunks = [];
   for (var i = 0; i < b64.length; i += chunkSize) {
     chunks.push(b64.slice(i, i + chunkSize));
   }
-  
-  // Send chunks sequentially
   var txId = 'tx_' + Date.now();
-  var sendChunk = function(idx) {
+  var idx = 0;
+  function sendNext() {
+    if (idx >= chunks.length) return gasRun('commitChunks', {tx_id: txId});
     return gasRun('receiveChunk', {
-      tx_id: txId,
-      chunk_index: idx,
-      total_chunks: chunks.length,
-      chunk_data: chunks[idx],
-      action: fnName,
-    });
-  };
-  
-  var promise = sendChunk(0);
-  for (var i = 1; i < chunks.length; i++) {
-    promise = promise.then((function(ci) {
-      return function() { return sendChunk(ci); };
-    })(i));
+      tx_id: txId, chunk_index: idx, total_chunks: chunks.length,
+      chunk_data: chunks[idx++], action: fnName,
+    }).then(sendNext);
   }
-  // Final: commit
-  return promise.then(function() {
-    return gasRun('commitChunks', { tx_id: txId });
+  return sendNext();
+}
+
+function gasPostScoreDescByLevel(data) {
+  // Parse and split SCORE_DESCS by level
+  var allDescs = JSON.parse(data.desc_json);
+  var byLevel = {};
+  Object.keys(allDescs).forEach(function(k) {
+    var level = k.split('|')[0];
+    if (!byLevel[level]) byLevel[level] = {};
+    byLevel[level][k] = allDescs[k];
   });
+  var levels = Object.keys(byLevel);
+  var idx = 0;
+  function saveNext() {
+    if (idx >= levels.length) {
+      return Promise.resolve({ok: true, saved: levels.length});
+    }
+    var lk = levels[idx++];
+    var levelData = {level_key: lk, desc_json: JSON.stringify(byLevel[lk])};
+    var jsonStr = JSON.stringify(levelData);
+    var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+    var chunkSize = 1400;
+    if (b64.length <= chunkSize) {
+      return gasRun('saveScoreDescByLevel', levelData).then(saveNext);
+    }
+    // Chunk this level
+    var chunks = [];
+    for (var i = 0; i < b64.length; i += chunkSize) chunks.push(b64.slice(i, i + chunkSize));
+    var txId = 'tx_' + Date.now() + '_' + lk.replace(/[^a-z0-9]/gi,'');
+    var ci = 0;
+    function sendChunk() {
+      if (ci >= chunks.length) return gasRun('commitChunks', {tx_id: txId}).then(saveNext);
+      return gasRun('receiveChunk', {
+        tx_id: txId, chunk_index: ci, total_chunks: chunks.length,
+        chunk_data: chunks[ci++], action: 'saveScoreDescByLevel',
+      }).then(sendChunk);
+    }
+    return sendChunk();
+  }
+  return saveNext();
 }
 
 // ── SETTINGS & DEADLINE ──────────────────────────────────────
