@@ -2324,13 +2324,17 @@ function importScoreDescFile(input, levelFilter) {
       if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       var lines = text.split('\n').filter(function(l){ return l.trim(); });
       var count = 0;
+      var lastSi = 0;
       for (var i = 1; i < lines.length; i++) {
         var cols = parseCSVLine(lines[i]);
         if (cols.length < 12) continue;
         var lk  = cols[0];
-        var si  = parseInt(cols[1]);
-        var ii  = parseInt(cols[4]);
-        if (isNaN(si) || isNaN(ii) || cols[1]==='' || cols[4]==='') continue;
+        // Convert 1-based to 0-based index
+        var si  = cols[1] !== '' ? parseInt(cols[1]) - 1 : lastSi;
+        var ii  = cols[4] !== '' ? parseInt(cols[4]) - 1 : 0;
+        if (isNaN(si) || isNaN(ii) || si < 0 || ii < 0) continue;
+        if (!lk) continue;
+        lastSi = si;
         // Filter by level if specified
         if (levelFilter && lk !== levelFilter) continue;
         // Validate that level exists
