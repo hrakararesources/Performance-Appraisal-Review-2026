@@ -2358,7 +2358,7 @@ function importScoreDescFile(input, levelFilter) {
         Object.keys(SCORE_DESCS).forEach(function(k) {
           if (k.split('|')[0] === levelFilter) levelDescs[k] = SCORE_DESCS[k];
         });
-        savePromise = gasRun('saveScoreDescByLevel', {
+        savePromise = gasPost('saveScoreDescByLevel', {
           level_key: levelFilter,
           desc_json: JSON.stringify(levelDescs)
         });
