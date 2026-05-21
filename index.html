@@ -1555,6 +1555,26 @@ function renderGradeDistChart() {
         },
       ]
     },
+    plugins: [{
+      id: 'barLabels',
+      afterDatasetsDraw: function(chart) {
+        var ctx2 = chart.ctx;
+        chart.data.datasets.forEach(function(dataset, i) {
+          if (dataset.type === 'line') return;
+          var meta = chart.getDatasetMeta(i);
+          meta.data.forEach(function(bar, index) {
+            var val = dataset.data[index];
+            if (val === 0) return;
+            ctx2.save();
+            ctx2.fillStyle = '#374151';
+            ctx2.font = 'bold 11px Arial';
+            ctx2.textAlign = 'center';
+            ctx2.fillText(val.toFixed(2) + '%', bar.x, bar.y - 6);
+            ctx2.restore();
+          });
+        });
+      }
+    }],
     options: {
       responsive: true,
       plugins: {
@@ -1562,11 +1582,10 @@ function renderGradeDistChart() {
         tooltip: {
           callbacks: {
             label: function(ctx) {
-              return ctx.dataset.label + ': ' + ctx.parsed.y + '%';
+              return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + '%';
             }
           }
         },
-        datalabels: false,
       },
       scales: {
         x: {
@@ -1577,8 +1596,9 @@ function renderGradeDistChart() {
           min: 0,
           max: yMax,
           ticks: {
-            callback: function(v) { return v.toFixed(2) + '%'; },
-            font: { size: 11 }
+            callback: function(v) { return v + '%'; },
+            font: { size: 11 },
+            stepSize: 20,
           },
           grid: { color: 'rgba(0,0,0,0.06)' }
         }
