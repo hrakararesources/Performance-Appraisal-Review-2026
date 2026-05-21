@@ -1165,6 +1165,27 @@ async function loadFromSheets() {
         if (!SUBORDINATES[u.finalId].includes(id)) SUBORDINATES[u.finalId].push(id);
       }
     });
+    // Load TopicConfig
+    try {
+      var tc = await gasRun('getTopicConfig');
+      if (tc && tc.configs) {
+        Object.keys(tc.configs).forEach(function(lk) {
+          if (EVAL_DATA[lk]) {
+            EVAL_DATA[lk] = tc.configs[lk];
+            EVAL_DATA_EDIT[lk] = JSON.parse(JSON.stringify(tc.configs[lk]));
+          }
+        });
+      }
+    } catch(e) { console.warn('TopicConfig load failed:', e); }
+
+    // Load ScoreDescConfig
+    try {
+      var sd = await gasRun('getScoreDescConfig');
+      if (sd && sd.descs) {
+        SCORE_DESCS = sd.descs;
+      }
+    } catch(e) { console.warn('ScoreDescConfig load failed:', e); }
+
     GAS_READY = true;
     hideSplash();
   } catch(err) {
@@ -2112,7 +2133,17 @@ function saveTopics() {
   if (totalPct !== 100) { showToast(("น้ำหนักรวม "+(totalPct)+"% — ต้องรวมเป็น 100% ก่อนบันทึก"),''); return; }
   // Apply edits back to live EVAL_DATA
   EVAL_DATA[teLevel] = JSON.parse(JSON.stringify(EVAL_DATA_EDIT[teLevel]));
-  showToast(currentLang==='th'?("บันทึกหัวข้อ "+(teLevel)+" เรียบร้อย"):(""+(teLevel)+" topics saved"),'success');
+  // Sync to Google Sheets
+  gasRun('saveTopicConfig', {
+    level: teLevel,
+    config_json: JSON.stringify(EVAL_DATA[teLevel])
+  }).then(function(r) {
+    if (r && r.ok) {
+      showToast(currentLang==='th'?("บันทึกหัวข้อ "+(teLevel)+" เรียบร้อย"):(""+(teLevel)+" topics saved"),'success');
+    }
+  }).catch(function(e) {
+    showToast('บันทึกล้มเหลว: ' + e.message, '');
+  });
 }
 
 function exportTopicsCSV() {
@@ -2213,7 +2244,17 @@ function saveScoreDescs(){
     if(!SCORE_DESCS[k])SCORE_DESCS[k]={th:'',en:''};
     SCORE_DESCS[k][editorLang]=val;
   });
-  showToast(t('desc-saved'),'success');renderDescPreview();
+  // Sync to Google Sheets
+  gasRun('saveScoreDescConfig', {
+    desc_json: JSON.stringify(SCORE_DESCS)
+  }).then(function(r) {
+    if (r && r.ok) {
+      showToast(t('desc-saved'),'success');
+    }
+  }).catch(function(e) {
+    showToast('บันทึกล้มเหลว: ' + e.message, '');
+  });
+  renderDescPreview();
 }
 function renderDescPreview(){
   const lk=editorLevel,si=editorSi,ii=editorIi;
