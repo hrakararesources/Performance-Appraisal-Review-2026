@@ -1496,11 +1496,7 @@ function renderGradeDistChart() {
   var actualPct = grades.map(function(g) { return total > 0 ? Math.round(gradeCounts[g] / total * 100) : 0; });
   var targetPct = [10, 20, 40, 20, 10];
 
-  // Smooth bell curve points (interpolate between grades)
-  var smoothLabels = ['', 'A', '', 'B', '', 'C', '', 'D', '', 'E', ''];
-  var smoothTarget = [0, 10, 15, 20, 30, 40, 30, 20, 15, 10, 0];
-  var smoothActual = [0, actualPct[0], (actualPct[0]+actualPct[1])/2, actualPct[1], (actualPct[1]+actualPct[2])/2,
-                      actualPct[2], (actualPct[2]+actualPct[3])/2, actualPct[3], (actualPct[3]+actualPct[4])/2, actualPct[4], 0];
+  // No longer need smoothed points - using simple 5-grade bar chart
 
   // Set title dynamically with dept name
   var titleEl = document.getElementById('t-grade-dist-title');
@@ -1524,33 +1520,38 @@ function renderGradeDistChart() {
   }
 
   var ctx = canvas.getContext('2d');
+
+  // Bell curve target line points (smooth, 20 points across A-E)
+  var bellCurvePoints = [10, 12, 15, 18, 20, 22, 23, 22, 20, 18, 40, 18, 20, 22, 23, 22, 20, 15, 12, 10];
+  // Simpler: use cubic interpolation across 5 grades
+  var bellX = [0, 1, 2, 3, 4];
+  var bellY = [10, 20, 40, 20, 10];
+
+  var yMax = Math.max(55, Math.max.apply(null, actualPct) + 15);
+
   gradeDistChartInstance = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
-      labels: smoothLabels,
+      labels: ['A', 'B', 'C', 'D', 'E'],
       datasets: [
         {
-          label: currentLang === 'th' ? '% เป้าหมาย (Bell Curve)' : '% Target (Bell Curve)',
-          data: smoothTarget,
-          borderColor: '#bdc3c7',
+          type: 'bar',
+          label: currentLang === 'th' ? '% จริง' : '% Actual',
+          data: actualPct,
+          backgroundColor: '#1B4BA8',
+          borderRadius: 3,
+          order: 2,
+        },
+        {
+          type: 'line',
+          label: currentLang === 'th' ? '% เป้าหมาย (Bell Curve)' : '% Target',
+          data: bellY,
+          borderColor: '#374151',
           borderWidth: 2,
-          borderDash: [6, 4],
           pointRadius: 0,
           tension: 0.4,
           fill: false,
-        },
-        {
-          label: currentLang === 'th' ? '% จริง (Final Score)' : '% Actual (Final Score)',
-          data: smoothActual,
-          borderColor: '#F5B731',
-          borderWidth: 3,
-          pointRadius: function(ctx) { return ctx.dataIndex % 2 === 1 ? 5 : 0; },
-          pointBackgroundColor: '#F5B731',
-          tension: 0.4,
-          fill: {
-            target: 'origin',
-            above: 'rgba(245,183,49,0.12)',
-          },
+          order: 1,
         },
       ]
     },
@@ -1561,23 +1562,22 @@ function renderGradeDistChart() {
         tooltip: {
           callbacks: {
             label: function(ctx) {
-              if (ctx.dataIndex % 2 !== 1) return null;
-              var grade = labels[Math.floor(ctx.dataIndex / 2)];
-              return grade + ': ' + ctx.parsed.y + '%';
+              return ctx.dataset.label + ': ' + ctx.parsed.y + '%';
             }
           }
-        }
+        },
+        datalabels: false,
       },
       scales: {
         x: {
           grid: { display: false },
-          ticks: { font: { size: 13 } }
+          ticks: { font: { size: 13, weight: '600' } }
         },
         y: {
           min: 0,
-          max: Math.max(55, Math.max.apply(null, smoothActual) + 10),
+          max: yMax,
           ticks: {
-            callback: function(v) { return v + '%'; },
+            callback: function(v) { return v.toFixed(2) + '%'; },
             font: { size: 11 }
           },
           grid: { color: 'rgba(0,0,0,0.06)' }
@@ -1586,16 +1586,20 @@ function renderGradeDistChart() {
     }
   });
 
-  // Legend
+  // Legend - show grade pct with bar style
   var legend = document.getElementById('grade-dist-legend');
   if (legend) {
-    var gradeColors = { A: '#1e8449', B: '#1565c0', C: '#e67e22', D: '#e74c3c', E: '#c0392b' };
-    var gradeLabels = { A: 'Role Model', B: 'Proactive', C: 'Reliable', D: 'Developing', E: 'Unsatisfactory' };
-    legend.innerHTML = grades.map(function(g) {
-      return '<div style="display:flex;align-items:center;gap:5px;font-size:12px;">'
-        + '<span style="width:12px;height:12px;border-radius:50%;background:'+gradeColors[g]+';display:inline-block;"></span>'
-        + '<span style="color:'+gradeColors[g]+';font-weight:600;">'+g+'</span>'
-        + '<span style="color:var(--text-muted);">'+gradeLabels[g]+' ('+actualPct[grades.indexOf(g)]+'%)</span>'
+    var gradeColors2 = { A: '#1e8449', B: '#1565c0', C: '#e67e22', D: '#e74c3c', E: '#c0392b' };
+    var gradeLabels2 = { A: 'Role Model', B: 'Proactive', C: 'Reliable', D: 'Developing', E: 'Unsatisfactory' };
+    var targetPct2 = { A: 10, B: 20, C: 40, D: 20, E: 10 };
+    legend.innerHTML = grades.map(function(g, gi) {
+      var pct = actualPct[gi];
+      return '<div style="display:flex;align-items:center;gap:6px;font-size:12px;padding:4px 8px;background:var(--bg);border-radius:6px;">'
+        + '<span style="width:12px;height:12px;border-radius:2px;background:#1B4BA8;display:inline-block;flex-shrink:0;"></span>'
+        + '<span style="font-weight:700;color:var(--primary);">'+g+'</span>'
+        + '<span style="color:var(--text-muted);">'+gradeLabels2[g]+'</span>'
+        + '<span style="font-weight:600;color:'+(pct>0?gradeColors2[g]:'var(--text-muted)')+';">'+pct+'%</span>'
+        + '<span style="color:var(--text-muted);font-size:10px;">(target:'+targetPct2[g]+'%)</span>'
         + '</div>';
     }).join('');
   }
