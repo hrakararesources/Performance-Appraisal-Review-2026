@@ -2300,6 +2300,9 @@ function exportScoreDescCSV() {
 }
 
 function importScoreDescFile(input) {
+  if (!input || !input.files || input.files.length === 0) {
+    showToast('กรุณาเลือกไฟล์',''); return;
+  }
   var file = input.files[0];
   if (!file) return;
   var reader = new FileReader();
