@@ -2219,18 +2219,30 @@ function exportScoreDescCSV() {
       var items = sec.items || [];
       items.forEach(function(item, ii) {
         var row = [lk, si, sec.name.th, sec.name.en, ii, item.th, item.en];
+        // TH descriptions
         [1,2,3,4,5].forEach(function(score) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
-          row.push(SCORE_DESCS[k] ? (SCORE_DESCS[k].th||'') : '');
+          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].th||'') : getDesc(lk, si, ii, score, 'th');
+          row.push(desc);
         });
+        // EN descriptions
         [1,2,3,4,5].forEach(function(score) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
-          row.push(SCORE_DESCS[k] ? (SCORE_DESCS[k].en||'') : '');
+          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].en||'') : getDesc(lk, si, ii, score, 'en');
+          row.push(desc);
         });
         rows.push(row);
       });
     });
   });
+
+  function getDesc(lk, si, ii, score, lang) {
+    var k = lk+'|'+si+'|'+ii+'|'+score;
+    if (SCORE_DESCS[k]) return SCORE_DESCS[k][lang] || '';
+    if (lk === 'O-Level' && typeof O_LEVEL_DESC !== 'undefined') return O_LEVEL_DESC[lang][score] || '';
+    if (typeof DEFAULT_DESC !== 'undefined') return DEFAULT_DESC[lang][score] || '';
+    return '';
+  }
 
   var csv = rows.map(function(r) {
     return r.map(function(cell) {
