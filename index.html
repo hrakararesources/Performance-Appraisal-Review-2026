@@ -2308,7 +2308,6 @@ function importScoreDescFile(input) {
       // Remove BOM
       if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       var lines = text.split('\n').filter(function(l){ return l.trim(); });
-      var header = parseCSVLine(lines[0]);
       var count = 0;
       for (var i = 1; i < lines.length; i++) {
         var cols = parseCSVLine(lines[i]);
@@ -2316,7 +2315,7 @@ function importScoreDescFile(input) {
         var lk  = cols[0];
         var si  = parseInt(cols[1]);
         var ii  = parseInt(cols[4]);
-        // Scores TH: cols 7-11, EN: cols 12-16
+        if (isNaN(si) || isNaN(ii)) continue;
         [1,2,3,4,5].forEach(function(score, idx) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
           if (!SCORE_DESCS[k]) SCORE_DESCS[k] = {th:'',en:''};
@@ -2325,19 +2324,18 @@ function importScoreDescFile(input) {
         });
         count++;
       }
-      // Save to Sheets
+      // Update UI immediately - don't wait for Sheets save
+      showToast('Import สำเร็จ '+count+' รายการ — กำลังบันทึก...','success');
+      renderDescEditor();
+      // Save to Sheets in background
       gasPost('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)}).then(function(r){
-        showToast('Import สำเร็จ '+count+' รายการ — บันทึกลง Sheets แล้ว','success');
-        renderDescEditor();
+        showToast('Import '+count+' รายการ — บันทึกลง Sheets แล้ว','success');
       }).catch(function(e){
-        showToast('Import สำเร็จ '+count+' รายการ','success');
-        renderDescEditor();
         console.warn('Save warning:', e.message);
       });
     } catch(e) {
       showToast('Import ล้มเหลว: '+e.message,'');
     }
-    input.value = '';
   };
   reader.readAsText(file, 'utf-8');
 }
