@@ -675,9 +675,31 @@ textarea{resize:vertical;min-height:70px;}
         <div class="card-header"><div class="card-title" id="t-settings-title">ตั้งค่ารอบการประเมิน</div></div>
         <div class="form-group" style="margin-bottom:1rem;">
           <label id="t-round-name">ชื่อรอบการประเมิน</label>
-          <input type="text" value="Performance 2026 - รอบที่ 1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
+          <input type="text" id="setting-round-name" value="Performance 2026 - รอบที่ 1" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
         </div>
-        <button class="btn btn-primary" onclick="showToast(currentLang==='th'?'บันทึกเรียบร้อย':'Saved successfully','success')">
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
+            📅 <span data-th="กำหนด Deadline Self Evaluation" data-en="Self Evaluation Deadline">กำหนด Deadline Self Evaluation</span>
+          </label>
+          <input type="date" id="setting-self-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="deadline-status-msg"></div>
+        </div>
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
+            📅 <span data-th="กำหนด Deadline S-Level Evaluation" data-en="S-Level Evaluation Deadline">กำหนด Deadline S-Level Evaluation</span>
+          </label>
+          <input type="date" id="setting-slevel-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="slevel-deadline-status-msg"></div>
+        </div>
+        
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
+            📅 <span data-th="กำหนด Deadline S-Level Evaluation" data-en="S-Level Evaluation Deadline">กำหนด Deadline S-Level Evaluation</span>
+          </label>
+          <input type="date" id="setting-slevel-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="slevel-deadline-status-msg"></div>
+        </div>
+        <button class="btn btn-primary" onclick="saveSettings()">
           <span data-th="บันทึก" data-en="Save">บันทึก</span>
         </button>
       </div>
@@ -1586,6 +1608,19 @@ function renderGradeDistChart() {
 // ── SELF EVAL ──
 function renderSelfEvalPage(){
   const u=currentUser;const eData=evalStore[u.id]||{};
+  // Show locked warning if past deadline
+  var submitBtn = document.getElementById('t-submit-btn');
+  if (submitBtn) {
+    if (isSelfLocked()) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = currentLang==='th'?'🔒 เลย Deadline แล้ว':'🔒 Deadline Passed';
+      submitBtn.style.background = '#95a5a6';
+    } else {
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('submit-eval');
+      submitBtn.style.background = '';
+    }
+  }
   selfScores=eData.selfScores?JSON.parse(JSON.stringify(eData.selfScores)):{};
   document.getElementById('self-eval-title').textContent=(""+(t('self-eval'))+" – "+(userName(u))+"");
   document.getElementById('self-eval-subtitle').textContent=(""+(t('level'))+": "+(u.level)+" | "+(t('dept'))+": "+(u.dept?u.dept[currentLang]:'—')+" | "+(t('pos'))+": "+(u.position?u.position[currentLang]:'—')+"");
@@ -1631,6 +1666,10 @@ function updateSelfProgress(){
 function updateSubProgress(lk){const score=calcScore(lk,subScores);document.getElementById('sub-live-score').textContent=score>0?score.toFixed(2):'—';}
 function clearSelfEval(){selfScores={};buildEvalSections('self-eval-sections',currentUser.level,selfScores,'self');updateSelfProgress();}
 function submitSelfEval(){
+  if (isSelfLocked()) {
+    showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
+    return;
+  }
   const total=totalItems(currentUser.level);const answered=countAnswered(selfScores);
   if(answered<total){showToast((""+(t('please-answer-all'))+" ("+(answered)+"/"+(total)+")"));return;}
   const score=calcScore(currentUser.level,selfScores);initEmpStore(currentUser.id);
@@ -1651,7 +1690,7 @@ function renderEvalOthers(){
   const rows=subs.map(sid=>{
     const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
     const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+(selfDone?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
+    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
   });
   container.innerHTML=("<table><thead><tr><th>"+(t('th-code'))+"</th><th>"+(t('th-name'))+"</th><th>"+(t('th-dept'))+"</th><th>"+(t('th-pos'))+"</th><th>Level</th><th>Self</th><th></th></tr></thead><tbody>"+(rows.join(''))+"</tbody></table>");
 }
@@ -1662,10 +1701,27 @@ function openSubEval(subId, readOnly){
   // Final approver เริ่มต้นด้วยคะแนนจาก S-Level, S-Level เริ่มต้นด้วยคะแนนจาก Self
   // render S-Level summary automatically
   setTimeout(function(){ renderSLevelSummary(); }, 100);
-  // Show/hide submit button based on readOnly
+  // Show/hide submit button based on readOnly and deadline lock
   var submitBtn = document.getElementById('t-sub-submit-btn');
   var cancelBtn = document.getElementById('t-sub-cancel-btn') || document.querySelector('#page-eval-sub .btn-outline');
-  if (submitBtn) submitBtn.style.display = window._subReadOnly ? 'none' : '';
+  if (submitBtn) {
+    var isLocked = currentUser.isFinal ? isFinalLocked() : isSLevelLocked();
+    if (window._subReadOnly) {
+      submitBtn.style.display = 'none';
+    } else if (isLocked) {
+      submitBtn.style.display = '';
+      submitBtn.disabled = true;
+      submitBtn.textContent = currentLang==='th'?'🔒 เลย Deadline แล้ว':'🔒 Deadline Passed';
+      submitBtn.style.background = '#95a5a6';
+      submitBtn.style.borderColor = '#95a5a6';
+    } else {
+      submitBtn.style.display = '';
+      submitBtn.disabled = false;
+      submitBtn.textContent = t('submit-eval');
+      submitBtn.style.background = '';
+      submitBtn.style.borderColor = '';
+    }
+  }
   if (cancelBtn && window._subReadOnly) cancelBtn.textContent = currentLang === 'th' ? 'ปิด' : 'Close';
   // load existing comment
   var commentEl = document.getElementById('sub-comment-text');
@@ -1695,6 +1751,14 @@ function openSubEval(subId, readOnly){
 }
 function toggleSpecialReason(){const c=document.getElementById('chk-special');document.getElementById('special-reason-box').style.display=c.checked?'block':'none';}
 function submitSubEval(){
+  if (currentUser.isFinal && isFinalLocked()) {
+    showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
+    return;
+  }
+  if (!currentUser.isFinal && isSLevelLocked()) {
+    showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
+    return;
+  }
   const sub=USERS[currentSubId];const total=totalItems(sub.level);const answered=countAnswered(subScores);
   if(answered<total){showToast((""+(t('please-answer-all'))+" ("+(answered)+"/"+(total)+")"));return;}
   var commentEl=document.getElementById('sub-comment-text');
@@ -1783,7 +1847,7 @@ function renderHrEmpList(){
     const deactBtn=isInactive
       ?("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--success);border-color:var(--success);\" onclick=\"toggleEmpActive('"+(id)+"',true)\">"+(currentLang==='th'?'เปิดใช้':'Activate')+"</button>")
       :("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--danger);border-color:var(--danger);\" onclick=\"confirmDeactivate('"+(id)+"')\">"+(currentLang==='th'?'ปิดใช้':'Deactivate')+"</button>");
-    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level)+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+"</td></tr>");
+    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level)+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+"<button class=\\\"btn btn-sm btn-outline\\\" style=\\\"color:var(--danger);border-color:var(--danger);\\\" onclick=\\\"showResetMenu(\\'"+id+"\\')\\\">+(currentLang==='th'?'Reset':'Reset')+"</button></td></tr>");
   }).join('');
 }
 function openAddEmpModal(){document.getElementById('modal-add-emp').classList.remove('hidden');}
@@ -2764,6 +2828,117 @@ function generateProposalPDF() {
   win.document.close();
 }
 
+// ── SETTINGS & DEADLINE ──────────────────────────────────────
+var SELF_DEADLINE = null;
+var SLEVEL_DEADLINE = null;
+
+// Lock check helpers
+function isSelfLocked() {
+  if (!SELF_DEADLINE) return false;
+  return new Date() > SELF_DEADLINE;
+}
+function isSLevelLocked() {
+  if (!SLEVEL_DEADLINE) return false;
+  return new Date() > SLEVEL_DEADLINE;
+}
+function isFinalLocked() {
+  return isSLevelLocked();
+}
+
+function saveSettings() {
+  var dl = document.getElementById('setting-self-deadline');
+  if (dl && dl.value) {
+    SELF_DEADLINE = new Date(dl.value);
+    SELF_DEADLINE.setHours(23, 59, 59, 999);
+    localStorage.setItem('kpi_self_deadline', dl.value);
+  } else {
+    SELF_DEADLINE = null;
+    localStorage.removeItem('kpi_self_deadline');
+  }
+  var dl2 = document.getElementById('setting-slevel-deadline');
+  if (dl2 && dl2.value) {
+    SLEVEL_DEADLINE = new Date(dl2.value);
+    SLEVEL_DEADLINE.setHours(23, 59, 59, 999);
+    localStorage.setItem('kpi_slevel_deadline', dl2.value);
+  } else {
+    SLEVEL_DEADLINE = null;
+    localStorage.removeItem('kpi_slevel_deadline');
+  }
+  updateDeadlineStatus();
+  updateSLevelDeadlineStatus();
+  showToast(currentLang === 'th' ? 'บันทึกการตั้งค่าเรียบร้อย' : 'Settings saved', 'success');
+  if (currentPage === 'page-eval-others') renderEvalOthers();
+}
+
+function loadDeadlineSetting() {
+  var saved = localStorage.getItem('kpi_self_deadline');
+  if (saved) {
+    SELF_DEADLINE = new Date(saved);
+    SELF_DEADLINE.setHours(23, 59, 59, 999);
+    var el = document.getElementById('setting-self-deadline');
+    if (el) el.value = saved;
+  }
+  var saved2 = localStorage.getItem('kpi_slevel_deadline');
+  if (saved2) {
+    SLEVEL_DEADLINE = new Date(saved2);
+    SLEVEL_DEADLINE.setHours(23, 59, 59, 999);
+    var el2 = document.getElementById('setting-slevel-deadline');
+    if (el2) el2.value = saved2;
+  }
+  updateDeadlineStatus();
+  updateSLevelDeadlineStatus();
+}
+
+function updateDeadlineStatus() {
+  var msg = document.getElementById('deadline-status-msg');
+  if (!msg) return;
+  if (!SELF_DEADLINE) {
+    msg.textContent = currentLang === 'th' ? 'ไม่ได้กำหนด Deadline' : 'No deadline set';
+    msg.style.color = 'var(--text-muted)';
+    return;
+  }
+  var now = new Date();
+  var isPast = now > SELF_DEADLINE;
+  if (isPast) {
+    msg.textContent = currentLang === 'th' ? 'เลย Deadline แล้ว — S-Level unlock อัตโนมัติ' : 'Deadline passed — S-Level auto-unlocked';
+    msg.style.color = '#e67e22';
+  } else {
+    var days = Math.ceil((SELF_DEADLINE - now) / (1000 * 60 * 60 * 24));
+    msg.textContent = currentLang === 'th' ? 'เหลืออีก ' + days + ' วัน' : days + ' days remaining';
+    msg.style.color = 'var(--success)';
+  }
+}
+
+function updateSLevelDeadlineStatus() {
+  var msg = document.getElementById('slevel-deadline-status-msg');
+  if (!msg) return;
+  if (!SLEVEL_DEADLINE) {
+    msg.textContent = currentLang === 'th' ? 'ไม่ได้กำหนด Deadline' : 'No deadline set';
+    msg.style.color = 'var(--text-muted)';
+    return;
+  }
+  var now = new Date();
+  var isPast = now > SLEVEL_DEADLINE;
+  if (isPast) {
+    msg.textContent = currentLang === 'th' ? 'เลย Deadline แล้ว — Final unlock อัตโนมัติ' : 'Deadline passed — Final auto-unlocked';
+    msg.style.color = '#e67e22';
+  } else {
+    var days = Math.ceil((SLEVEL_DEADLINE - now) / (1000 * 60 * 60 * 24));
+    msg.textContent = currentLang === 'th' ? 'เหลืออีก ' + days + ' วัน' : days + ' days remaining';
+    msg.style.color = 'var(--success)';
+  }
+}
+
+function isSLevelDeadlinePassed() {
+  if (!SLEVEL_DEADLINE) return false;
+  return new Date() > SLEVEL_DEADLINE;
+}
+
+function isDeadlinePassed() {
+  if (!SELF_DEADLINE) return false;
+  return new Date() > SELF_DEADLINE;
+}
+
 // ── MOBILE SIDEBAR ───────────────────────────────────────────
 function toggleSidebar() {
   var sidebar = document.getElementById('sidebar');
@@ -2819,6 +2994,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   }
   applyTranslations();
   loadFromSheets();
+  loadDeadlineSetting();
 });
 
 
