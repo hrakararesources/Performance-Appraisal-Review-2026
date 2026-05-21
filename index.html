@@ -1114,7 +1114,16 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxsSGgfR_QZ1bSiQ_u-RJW6
 function gasRun(fnName) {
   var args = Array.prototype.slice.call(arguments, 1);
   var params = {action: fnName};
-  if (args.length > 0) params.data = JSON.stringify(args[0]);
+  if (args.length > 0) {
+    var jsonStr = JSON.stringify(args[0]);
+    // Use btoa encoding to avoid special chars breaking JSONP URL
+    try {
+      params.data = btoa(unescape(encodeURIComponent(jsonStr)));
+      params.encoded = '1';
+    } catch(e) {
+      params.data = jsonStr;
+    }
+  }
   return new Promise(function(resolve, reject) {
     var cbName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     var timer = setTimeout(function() {
