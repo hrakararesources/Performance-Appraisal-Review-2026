@@ -684,13 +684,7 @@ textarea{resize:vertical;min-height:70px;}
           <input type="date" id="setting-self-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
           <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="deadline-status-msg"></div>
         </div>
-        <div class="form-group" style="margin-bottom:1rem;">
-          <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
-            📅 <span data-th="กำหนด Deadline S-Level Evaluation" data-en="S-Level Evaluation Deadline">กำหนด Deadline S-Level Evaluation</span>
-          </label>
-          <input type="date" id="setting-slevel-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
-          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="slevel-deadline-status-msg"></div>
-        </div>
+        
         
         <div class="form-group" style="margin-bottom:1rem;">
           <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
@@ -706,9 +700,9 @@ textarea{resize:vertical;min-height:70px;}
       <div class="card">
         <div class="card-header"><div class="card-title" id="t-email-notify">ส่ง Email แจ้งเตือน</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-outline" onclick="sendBroadcastEmail('self')" id="t-send-self-email">ส่งแจ้งเตือนพนักงาน (Self Eval)</button>
-          <button class="btn btn-outline" onclick="sendBroadcastEmail('supervisor')" id="t-send-sup-email">ส่งแจ้งเตือนผู้ประเมิน S-Level</button>
-          <button class="btn btn-outline" onclick="sendBroadcastEmail('final')" id="t-send-final-email">ส่งแจ้งเตือน Final Evaluator</button>
+          <button class="btn btn-outline" onclick="sendBroadcastEmail('self')" id="t-send-self-email">ส่ง Inbox แจ้งเตือนพนักงาน (Self Eval)</button>
+          <button class="btn btn-outline" onclick="sendBroadcastEmail('supervisor')" id="t-send-sup-email">ส่ง Inbox แจ้งเตือนผู้ประเมิน S-Level</button>
+          <button class="btn btn-outline" onclick="sendBroadcastEmail('final')" id="t-send-final-email">ส่ง Email แจ้งเตือน Final Evaluator</button>
         </div>
       </div>
     </div>
@@ -743,6 +737,7 @@ textarea{resize:vertical;min-height:70px;}
 <option>M-Level-B (TM)</option>
 <option>M-Level-B (IC)</option></select>
     </div>
+    <div class="form-group"><label>Email (Outlook)</label><input type="email" id="new-emp-email" placeholder="name@akarares.com" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
     <div class="form-group"><label>ผู้ประเมิน (Supervisor ID)</label><input type="text" id="new-emp-sup" placeholder="เช่น AKR26020001" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
   </div>
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:1rem;">
@@ -1195,6 +1190,7 @@ function syncUser(empId) {
     is_final: u.isFinal || false,
     is_hr: u.isHR || false,
     inactive: u.inactive || false,
+    email: u.email || '',
   });
 }
 function syncEval(empId) {
@@ -1863,7 +1859,8 @@ function addEmployee(){
   const sup=document.getElementById('new-emp-sup').value.trim();
   if(!id||!nameTh||!pass){showToast(t('fill-all'));return;}
   const startD = document.getElementById('new-emp-start').value;
-  USERS[id]={name:{th:nameTh,en:nameEn||nameTh},level,pass,dept:{th:dept,en:dept},position:{th:pos,en:pos},startDate:startD||null,supervisorId:sup||null,finalId:null,isFinal:false};
+  var empEmail = document.getElementById('new-emp-email') ? document.getElementById('new-emp-email').value.trim() : '';
+  USERS[id]={name:{th:nameTh,en:nameEn||nameTh},level,pass,dept:{th:dept,en:dept},position:{th:pos,en:pos},startDate:startD||null,supervisorId:sup||null,finalId:null,isFinal:false,email:empEmail||null};
   if(sup&&SUBORDINATES[sup])SUBORDINATES[sup].push(id);else if(sup)SUBORDINATES[sup]=[id];
   closeModal('modal-add-emp');showToast((""+(t('add-emp-done'))+": "+(nameTh)+""),'success');
   syncUser(id);
@@ -1908,8 +1905,66 @@ function exportReport(){
 }
 function viewEmpReport(empId){showToast((""+(empId)+" – "+(currentLang==='th'?'ดูรายละเอียดในตาราง':'See details in table')+""),'');}
 function sendBroadcastEmail(type){
-  Object.keys(USERS).filter(id=>!USERS[id].isHR).forEach(id=>{addInboxMsg(id,{from:'HR',subject:currentLang==='th'?'แจ้งเตือนจากฝ่าย HR':'Notification from HR',body:type==='self'?t('not-eval-yet'):'กรุณาดำเนินการในระบบ',link:'page-self-eval'});});
-  showToast(t('send-email-done'),'success');updateNotifBadges();
+  if (type === 'self') {
+    // Self: inbox only (ใช้ Line OA แทน email)
+    Object.keys(USERS).filter(function(id){ return !USERS[id].isHR && !USERS[id].inactive; }).forEach(function(id){
+      addInboxMsg(id,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
+        subject:currentLang==='th'?'แจ้งเตือน: กรุณาประเมินตนเอง':'Reminder: Please complete self-evaluation',
+        body:t('not-eval-yet'),link:'page-self-eval'});
+    });
+    showToast(t('send-email-done'),'success');
+    updateNotifBadges();
+    return;
+  }
+
+  if (type === 'supervisor') {
+    // S-Level: inbox เท่านั้น (ไม่ส่ง email)
+    var supervisorIds = [...new Set(Object.values(USERS)
+      .filter(function(u){ return u.supervisorId; })
+      .map(function(u){ return u.supervisorId; }))];
+    supervisorIds.forEach(function(supId){
+      if (!USERS[supId] || USERS[supId].inactive) return;
+      addInboxMsg(supId,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
+        subject:currentLang==='th'?'แจ้งเตือน: กรุณาประเมิน S-Level':'Reminder: Please complete S-Level evaluation',
+        body:currentLang==='th'?'มีพนักงานรอการประเมิน S-Level':'Employees are pending S-Level evaluation',
+        link:'page-eval-others'});
+    });
+    showToast(t('send-email-done'),'success');
+    updateNotifBadges();
+    return;
+  }
+
+  if (type === 'final') {
+    // Final: inbox + Email จริงไปยัง Final approvers
+    var finalIds = [...new Set(Object.values(USERS)
+      .filter(function(u){ return u.isFinal && !u.inactive; })
+      .map(function(u, _, arr){ return Object.keys(USERS).find(function(k){ return USERS[k]===u; }); }))];
+
+    // inbox
+    Object.keys(USERS).filter(function(id){ return USERS[id].isFinal && !USERS[id].inactive; }).forEach(function(id){
+      addInboxMsg(id,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
+        subject:currentLang==='th'?'แจ้งเตือน: กรุณาอนุมัติผลการประเมิน':'Reminder: Please complete Final evaluation',
+        body:currentLang==='th'?'มีพนักงานรอการอนุมัติ Final Evaluation':'Employees are pending Final approval',
+        link:'page-eval-others'});
+    });
+    updateNotifBadges();
+
+    // Email จริง
+    gasRun('broadcastEmailFinals', {}).then(function(r){
+      if (r && r.ok) {
+        var sent = (r.results || []).filter(function(x){ return x.ok; }).length;
+        var failed = (r.results || []).filter(function(x){ return !x.ok; }).length;
+        var msg = currentLang === 'th'
+          ? 'ส่ง Email ถึง Final Evaluator: ' + sent + ' คน' + (failed > 0 ? ' (ล้มเหลว ' + failed + ')' : '')
+          : 'Email sent to ' + sent + ' Final Evaluators' + (failed > 0 ? ' (' + failed + ' failed)' : '');
+        showToast(msg, 'success');
+      } else {
+        showToast(currentLang==='th'?'ส่ง Email ไม่สำเร็จ':'Failed to send email', '');
+      }
+    }).catch(function(e){
+      showToast('Error: ' + e.message, '');
+    });
+  }
 }
 
 // ══════════════════════════════════════════
