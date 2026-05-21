@@ -645,7 +645,7 @@ textarea{resize:vertical;min-height:70px;}
             <button class="btn btn-sm btn-outline" onclick="exportScoreDescCSV()">⬇ Export Excel</button>
             <label class="btn btn-sm btn-outline" style="cursor:pointer;margin:0;">
               ⬆ Import Excel
-              <input type="file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importScoreDescFile(this)">
+              <input type="file" accept=".csv,.xlsx,.xls" style="display:none;" onchange="importScoreDescFile(event.target)">
             </label>
             <button class="btn btn-sm btn-accent" onclick="saveScoreDescs()" id="t-save-desc-btn">บันทึกทั้งหมด</button>
           </div>
