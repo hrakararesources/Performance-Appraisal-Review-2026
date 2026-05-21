@@ -402,14 +402,14 @@ textarea{resize:vertical;min-height:70px;}
       <div id="home-alerts"></div>
       <div id="home-hr-summary" style="display:none;"></div>
       <div id="home-grade-chart" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;">
           <!-- Chart column -->
-          <div class="card" style="padding:14px;">
+          <div class="card" style="padding:14px;display:flex;flex-direction:column;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
               <div class="card-title" style="margin:0;font-size:13px;" id="t-grade-dist-title">Grade Distribution</div>
               <span id="home-chart-count" style="font-size:11px;color:var(--text-muted);"></span>
             </div>
-            <canvas id="grade-dist-canvas" style="max-height:160px;"></canvas>
+            <canvas id="grade-dist-canvas" style="flex:1;min-height:120px;max-height:300px;"></canvas>
             <div id="grade-dist-legend" style="display:flex;justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap;font-size:11px;"></div>
           </div>
           <!-- Info column -->
@@ -1644,7 +1644,7 @@ function renderGradeDistChart() {
   var bellX = [0, 1, 2, 3, 4];
   var bellY = [10, 20, 40, 20, 10];
 
-  var yMax = Math.max(55, Math.max.apply(null, actualPct) + 15);
+        var yMax = 100;
 
   gradeDistChartInstance = new Chart(ctx, {
     type: 'bar',
@@ -1718,6 +1718,7 @@ function renderGradeDistChart() {
             callback: function(v) { return v + '%'; },
             font: { size: 11 },
             stepSize: 20,
+            max: 100,
           },
           grid: { color: 'rgba(0,0,0,0.06)' }
         }
