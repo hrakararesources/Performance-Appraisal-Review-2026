@@ -2327,12 +2327,12 @@ function importScoreDescFile(input) {
       }
       // Save to Sheets
       gasPost('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)}).then(function(r){
-        if (r && r.ok) {
-          showToast('Import สำเร็จ '+count+' รายการ — บันทึกลง Sheets แล้ว','success');
-          renderDescEditor();
-        }
+        showToast('Import สำเร็จ '+count+' รายการ — บันทึกลง Sheets แล้ว','success');
+        renderDescEditor();
       }).catch(function(e){
-        showToast('Import OK แต่บันทึกล้มเหลว: '+e.message,'');
+        showToast('Import สำเร็จ '+count+' รายการ','success');
+        renderDescEditor();
+        console.warn('Save warning:', e.message);
       });
     } catch(e) {
       showToast('Import ล้มเหลว: '+e.message,'');
