@@ -2266,17 +2266,16 @@ function exportScoreDescCSV() {
     secs.forEach(function(sec, si) {
       var items = sec.items || [];
       items.forEach(function(item, ii) {
+        // si and ii are 0-based indices
         var row = [lk, si, sec.name.th, sec.name.en, ii, item.th, item.en];
-        // TH descriptions
         [1,2,3,4,5].forEach(function(score) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
-          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].th||'') : getDesc(lk, si, ii, score, 'th');
+          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].th||'') : getDescDefault(lk, si, ii, score, 'th');
           row.push(desc);
         });
-        // EN descriptions
         [1,2,3,4,5].forEach(function(score) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
-          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].en||'') : getDesc(lk, si, ii, score, 'en');
+          var desc = SCORE_DESCS[k] ? (SCORE_DESCS[k].en||'') : getDescDefault(lk, si, ii, score, 'en');
           row.push(desc);
         });
         rows.push(row);
@@ -2284,7 +2283,7 @@ function exportScoreDescCSV() {
     });
   });
 
-  function getDesc(lk, si, ii, score, lang) {
+  function getDescDefault(lk, si, ii, score, lang) {
     var k = lk+'|'+si+'|'+ii+'|'+score;
     if (SCORE_DESCS[k]) return SCORE_DESCS[k][lang] || '';
     if (lk === 'O-Level' && typeof O_LEVEL_DESC !== 'undefined') return O_LEVEL_DESC[lang][score] || '';
@@ -2331,9 +2330,11 @@ function importScoreDescFile(input, levelFilter) {
         var lk  = cols[0];
         var si  = parseInt(cols[1]);
         var ii  = parseInt(cols[4]);
-        if (isNaN(si) || isNaN(ii)) continue;
+        if (isNaN(si) || isNaN(ii) || cols[1]==='' || cols[4]==='') continue;
         // Filter by level if specified
         if (levelFilter && lk !== levelFilter) continue;
+        // Validate that level exists
+        if (!EVAL_DATA[lk]) continue;
         [1,2,3,4,5].forEach(function(score, idx) {
           var k = lk+'|'+si+'|'+ii+'|'+score;
           if (!SCORE_DESCS[k]) SCORE_DESCS[k] = {th:'',en:''};
