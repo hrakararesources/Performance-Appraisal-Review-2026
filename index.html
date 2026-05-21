@@ -2150,7 +2150,7 @@ function saveTopics() {
   // Apply edits back to live EVAL_DATA
   EVAL_DATA[teLevel] = JSON.parse(JSON.stringify(EVAL_DATA_EDIT[teLevel]));
   // Sync to Google Sheets
-  gasRun('saveTopicConfig', {
+  gasPost('saveTopicConfig', {
     level: teLevel,
     config_json: JSON.stringify(EVAL_DATA[teLevel])
   }).then(function(r) {
@@ -2288,7 +2288,7 @@ function importScoreDescFile(input) {
         count++;
       }
       // Save to Sheets
-      gasRun('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)}).then(function(r){
+      gasPost('saveScoreDescConfig', {desc_json: JSON.stringify(SCORE_DESCS)}).then(function(r){
         if (r && r.ok) {
           showToast('Import สำเร็จ '+count+' รายการ — บันทึกลง Sheets แล้ว','success');
           renderDescEditor();
@@ -2373,7 +2373,7 @@ function saveScoreDescs(){
     SCORE_DESCS[k][editorLang]=val;
   });
   // Sync to Google Sheets
-  gasRun('saveScoreDescConfig', {
+  gasPost('saveScoreDescConfig', {
     desc_json: JSON.stringify(SCORE_DESCS)
   }).then(function(r) {
     if (r && r.ok) {
@@ -3076,6 +3076,50 @@ function generateProposalPDF() {
   var win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
+}
+
+// ── GAS POST (for large payloads) ───────────────────────────
+function gasPost(fnName, data) {
+  // Use fetch with no-cors for large data that exceeds JSONP URL limit
+  // Since no-cors doesn't return response, we use a workaround:
+  // Split large JSON into chunks and send via multiple JSONP calls
+  var jsonStr = JSON.stringify(data);
+  var chunkSize = 1500; // safe chunk size in base64
+  
+  if (jsonStr.length <= 3000) {
+    // Small enough for JSONP
+    return gasRun(fnName, data);
+  }
+  
+  // For large data: send in chunks
+  var b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+  var chunks = [];
+  for (var i = 0; i < b64.length; i += chunkSize) {
+    chunks.push(b64.slice(i, i + chunkSize));
+  }
+  
+  // Send chunks sequentially
+  var txId = 'tx_' + Date.now();
+  var sendChunk = function(idx) {
+    return gasRun('receiveChunk', {
+      tx_id: txId,
+      chunk_index: idx,
+      total_chunks: chunks.length,
+      chunk_data: chunks[idx],
+      action: fnName,
+    });
+  };
+  
+  var promise = sendChunk(0);
+  for (var i = 1; i < chunks.length; i++) {
+    promise = promise.then((function(ci) {
+      return function() { return sendChunk(ci); };
+    })(i));
+  }
+  // Final: commit
+  return promise.then(function() {
+    return gasRun('commitChunks', { tx_id: txId });
+  });
 }
 
 // ── SETTINGS & DEADLINE ──────────────────────────────────────
