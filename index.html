@@ -619,7 +619,8 @@ textarea{resize:vertical;min-height:70px;}
               ⬆ Import CSV
             </label>
             <button class="btn btn-sm btn-outline" onclick="exportTopicsCSV()">⬇ Export CSV</button>
-            <button class="btn btn-sm btn-accent" onclick="saveTopics()" id="te-save-btn">บันทึกทั้งหมด</button>
+            <button class="btn btn-sm btn-accent" onclick="saveTopics()" id="te-save-btn">บันทึก Level นี้</button>
+            <button class="btn btn-sm btn-primary" onclick="saveAllLevels()" id="t-save-all-btn">💾 บันทึกทุก Level</button>
           </div>
         </div>
         <div class="alert alert-info" style="margin-bottom:1rem;" id="te-hint">
@@ -2141,6 +2142,43 @@ function teMoveItem(si, ii, dir) {
   const items = EVAL_DATA_EDIT[teLevel].sections[si].items;
   const tmp = items[ii]; items[ii] = items[ii+dir]; items[ii+dir] = tmp;
   renderTeItems(si);
+}
+
+function saveAllLevels() {
+  var levels = Object.keys(EVAL_DATA);
+  var btn = document.getElementById('t-save-all-btn');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ กำลังบันทึก...'; }
+
+  var idx = 0;
+  var errors = [];
+
+  function saveNext() {
+    if (idx >= levels.length) {
+      if (btn) { btn.disabled = false; btn.textContent = '💾 บันทึกทุก Level'; }
+      if (errors.length > 0) {
+        showToast('บันทึกล้มเหลว: ' + errors.join(', '), '');
+      } else {
+        showToast('บันทึกทุก Level เรียบร้อยแล้ว (' + levels.length + ' Levels)', 'success');
+      }
+      return;
+    }
+    var lk = levels[idx];
+    idx++;
+    if (btn) btn.textContent = '⏳ ' + lk + ' (' + idx + '/' + levels.length + ')';
+
+    gasPost('saveTopicConfig', {
+      level: lk,
+      config_json: JSON.stringify(EVAL_DATA[lk])
+    }).then(function(r) {
+      if (!r || !r.ok) errors.push(lk);
+      saveNext();
+    }).catch(function(e) {
+      errors.push(lk);
+      saveNext();
+    });
+  }
+
+  saveNext();
 }
 
 function saveTopics() {
