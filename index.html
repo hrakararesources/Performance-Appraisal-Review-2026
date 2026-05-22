@@ -402,28 +402,25 @@ textarea{resize:vertical;min-height:70px;}
       <div id="home-alerts"></div>
       <div id="home-hr-summary" style="display:none;"></div>
       <div id="home-grade-chart" style="display:none;">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1.5fr;gap:14px;align-items:stretch;">
           <!-- Chart column -->
           <div class="card" style="padding:14px;display:flex;flex-direction:column;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
               <div class="card-title" style="margin:0;font-size:13px;" id="t-grade-dist-title">Grade Distribution</div>
               <span id="home-chart-count" style="font-size:11px;color:var(--text-muted);"></span>
             </div>
-            <canvas id="grade-dist-canvas" style="flex:1;min-height:120px;max-height:300px;"></canvas>
-            <div id="grade-dist-legend" style="display:flex;justify-content:center;gap:8px;margin-top:8px;flex-wrap:wrap;font-size:11px;"></div>
+            <canvas id="grade-dist-canvas" style="flex:1;min-height:140px;"></canvas>
+            <div id="grade-dist-legend" style="display:flex;justify-content:center;gap:6px;margin-top:8px;flex-wrap:wrap;font-size:11px;"></div>
           </div>
-          <!-- Info column -->
-          <div style="display:flex;flex-direction:column;gap:12px;">
-            <!-- ขั้นตอนการประเมิน -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:10px;font-size:13px;" data-th="ขั้นตอนการประเมิน" data-en="Evaluation Process">ขั้นตอนการประเมิน</div>
-              <div id="home-steps-list"></div>
-            </div>
-            <!-- เกณฑ์การให้เกรด -->
-            <div class="card" style="padding:14px;">
-              <div class="card-title" style="margin-bottom:10px;font-size:13px;" data-th="เกณฑ์การให้เกรด" data-en="Grade Criteria">เกณฑ์การให้เกรด</div>
-              <div id="home-grade-criteria"></div>
-            </div>
+          <!-- Steps column -->
+          <div class="card" style="padding:14px;">
+            <div class="card-title" style="margin-bottom:10px;font-size:13px;" data-th="ขั้นตอนการประเมิน" data-en="Evaluation Process">ขั้นตอนการประเมิน</div>
+            <div id="home-steps-list"></div>
+          </div>
+          <!-- Grade criteria column -->
+          <div class="card" style="padding:14px;">
+            <div class="card-title" style="margin-bottom:10px;font-size:13px;" data-th="เกณฑ์การให้เกรด" data-en="Grade Criteria">เกณฑ์การให้เกรด</div>
+            <div id="home-grade-criteria"></div>
           </div>
         </div>
       </div><div id="home-grade-chart" style="display:none;">
@@ -1585,44 +1582,65 @@ function renderGradeDistChart() {
   // Render steps list
   var stepsEl = document.getElementById('home-steps-list');
   if (stepsEl) {
+    var allEmpIds = Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; });
+    var totalEmp = allEmpIds.length;
+    var selfCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].selfTotal; }).length;
+    var sCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].sTotal; }).length;
+    var fCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].finalTotal; }).length;
+    var isth = currentLang==='th';
     var steps = [
-      {label: currentLang==='th'?'HR เปิดรอบ':'HR Opens Round', done: true},
-      {label: currentLang==='th'?'ประเมินตนเอง':'Self Evaluation', active: true},
-      {label: currentLang==='th'?'S-Level ประเมิน':'S-Level Evaluation', done: false},
-      {label: currentLang==='th'?'Final Evaluation':'Final Evaluation', done: false},
+      {label: isth?'HR เปิดรอบ':'HR opens round', sub: isth?'เสร็จสิ้น':'Complete', done: true, active: false},
+      {label: isth?'ประเมินตนเอง':'Self Evaluation', sub: selfCount+'/'+totalEmp+(isth?' คน':' employees'), done: selfCount===totalEmp, active: selfCount<totalEmp},
+      {label: isth?'S-Level ประเมิน':'S-Level Evaluation', sub: sCount+'/'+totalEmp+(isth?' คน':' employees'), done: sCount===totalEmp, active: sCount>0&&sCount<totalEmp},
+      {label: isth?'Final Evaluation':'Final Evaluation', sub: fCount+'/'+totalEmp+(isth?' คน':' employees'), done: fCount===totalEmp, active: fCount>0&&fCount<totalEmp},
     ];
-    stepsEl.innerHTML = steps.map(function(s, i) {
-      var color = s.done ? 'var(--success)' : s.active ? '#F5B731' : 'var(--border)';
+    stepsEl.innerHTML = steps.map(function(s) {
+      var dotColor = s.done ? '#1e8449' : s.active ? '#F5B731' : '#d1d5db';
       var textColor = s.done || s.active ? 'var(--text)' : 'var(--text-muted)';
-      return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">'
-        + '<div style="width:12px;height:12px;border-radius:50%;background:'+color+';flex-shrink:0;"></div>'
-        + '<span style="font-size:13px;color:'+textColor+';">'+s.label+'</span>'
-        + '</div>';
+      return '<div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:10px;">'
+        + '<div style="width:13px;height:13px;border-radius:50%;background:'+dotColor+';flex-shrink:0;margin-top:2px;"></div>'
+        + '<div>'
+        + '<div style="font-size:13px;font-weight:600;color:'+textColor+';">'+s.label+'</div>'
+        + '<div style="font-size:11px;color:var(--text-muted);">'+s.sub+'</div>'
+        + '</div></div>';
     }).join('');
   }
 
   // Render grade criteria
   var criteriaEl = document.getElementById('home-grade-criteria');
   if (criteriaEl) {
-    var grades = [
-      {g:'A', label:'Role Model', range:'4.21–5.00', color:'#1e8449', bar:85},
-      {g:'B', label:'Proactive',  range:'3.41–4.20', color:'#1565c0', bar:70},
-      {g:'C', label:'Reliable',   range:'2.61–3.40', color:'#e67e22', bar:55},
-      {g:'D', label:'Developing', range:'1.81–2.60', color:'#e74c3c', bar:40},
-      {g:'E', label:'Unsatisfactory', range:'1.00–1.80', color:'#c0392b', bar:25},
+    var isth2 = currentLang==='th';
+    var gcriteria = [
+      {g:'A', labelTh:'โดดเด่น', labelEn:'Role Model', range:'4.21–5.00', color:'#1e8449',
+       descTh:'สร้างผลงานที่โดดเด่นและสม่ำเสมอ ปฏิบัติงานเป็นแบบอย่างที่ดี (Role Model) ในการสร้างมาตรฐาน บริหารความเสี่ยง และสาธิตพฤติกรรมที่เป็นเลิศ',
+       descEn:'Delivers exceptional and consistent results. Acts as a Role Model by setting new standards, proactively mitigating risks, and demonstrating exemplary discipline and leadership.'},
+      {g:'A', labelTh:'เป็นความคาดหมาย', labelEn:'Proactive', range:'3.41–4.20', color:'#1565c0',
+       descTh:'ส่งมอบงานคุณภาพสูงอย่างสม่ำเสมอ มีแนวทางการทำงานเชิงรุก (Proactive) สามารถทำงานได้ดีภายใต้แรงกดดัน และป้องกันปัญหาที่อาจเกิดขึ้นได้อย่างมีประสิทธิภาพ',
+       descEn:'Consistently delivers high-quality work. Demonstrates a Proactive approach, performs well under pressure, and effectively prevents potential issues before they arise.'},
+      {g:'A', labelTh:'เป็นไปตามความคาดหมาย', labelEn:'Reliable', range:'2.61–3.40', color:'#e67e22',
+       descTh:'ปฏิบัติตามข้อกำหนดงานและตัวชี้วัด (KPIs) ทั้งหมดอย่างครบถ้วน เป็นสมาชิกทีมที่น่าเชื่อถือ ยึดมั่นในมาตรฐานการทำงานอย่างสม่ำเสมอ และปฏิบัติตามนโยบายขององค์กรอย่างเคร่งครัด',
+       descEn:'Fully meets all job requirements and KPIs. A Reliable team member who maintains consistent work standards and strictly adheres to organizational policies and discipline.'},
+      {g:'A', labelTh:'ต้องปรับปรุง', labelEn:'Developing', range:'1.81–2.60', color:'#e74c3c',
+       descTh:'ผลงานไม่สอดคล้องหรือต่ำกว่ามาตรฐานที่กำหนดในบางด้าน ต้องการการดูแลอย่างใกล้ชิดและมีแผนพัฒนา (Development plan) ที่ชัดเจนเพื่อปรับปรุงการปฏิบัติงาน',
+       descEn:'Performance is inconsistent or below the required standard in certain areas. Requires close supervision and a clear Development plan to bridge performance gaps.'},
+      {g:'A', labelTh:'ไม่น่าพอใจ', labelEn:'Unsatisfactory', range:'1.00–1.80', color:'#c0392b',
+       descTh:'ผลการปฏิบัติงานต่ำกว่าเป้าหมายอย่างมีนัยสำคัญ พฤติกรรมที่พึงประสงค์แทบไม่ปรากฏ ไม่สามารถปฏิบัติตามมาตรฐานขั้นต่ำได้ หรือแสดงพฤติกรรมที่ก่อให้เกิดความเสี่ยงต่อองค์กร',
+       descEn:'Performance is significantly below target. Positive behaviors are Hardly Observed. Fails to meet basic standards or demonstrates behaviors that pose risks to the organization.'},
     ];
-    criteriaEl.innerHTML = grades.map(function(g) {
-      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">'
-        + '<div style="width:24px;height:24px;border-radius:50%;background:'+g.color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
-        + '<span style="font-size:11px;font-weight:700;color:'+g.color+';">'+g.g+'</span></div>'
+    criteriaEl.innerHTML = gcriteria.map(function(g, i) {
+      var label = isth2 ? g.labelTh : g.labelEn;
+      var desc = isth2 ? g.descTh : g.descEn;
+      var letter = ['A','B','C','D','E'][i];
+      return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">'
+        + '<div style="width:24px;height:24px;border-radius:50%;background:'+g.color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
+        + '<span style="font-size:11px;font-weight:700;color:'+g.color+';">'+letter+'</span></div>'
         + '<div style="flex:1;">'
-        + '<div style="display:flex;justify-content:space-between;margin-bottom:2px;">'
-        + '<span style="font-size:12px;font-weight:600;color:var(--text);">'+g.label+'</span>'
-        + '<span style="font-size:11px;color:var(--text-muted);">'+g.range+'</span>'
+        + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
+        + '<span style="font-size:12px;font-weight:700;color:'+g.color+';">'+label+'</span>'
+        + '<span style="font-size:10px;color:var(--text-muted);margin-left:6px;white-space:nowrap;">'+g.range+'</span>'
         + '</div>'
-        + '<div style="height:4px;background:var(--border);border-radius:2px;">'
-        + '<div style="height:4px;width:'+g.bar+'%;background:'+g.color+';border-radius:2px;"></div>'
-        + '</div></div></div>';
+        + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">'+desc+'</div>'
+        + '</div></div>';
     }).join('');
   }
 
