@@ -2069,113 +2069,161 @@ function renderHrReport(){
   document.getElementById('grade-dist').innerHTML=("<div style=\"display:flex;align-items:flex-end;gap:12px;height:120px;padding:0 1rem;\">"+(GRADES.map(g=>("<div style=\"flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;\"><div style=\"font-size:12px;color:var(--text-muted);\">"+(gc[g.letter])+"</div><div style=\"width:100%;background:"+(g.bar)+";border-radius:4px 4px 0 0;height:"+(gc[g.letter]/mx*90)+"px;min-height:2px;\"></div><div style=\"font-size:13px;font-weight:800;color:"+(g.color)+";\">"+(g.letter)+"</div></div>")).join(''))+"</div>");
 }
 function exportReportExcel() {
-  // Use SheetJS to create Excel with grouped by Level layout
-  var allUsers = Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; });
+  if (typeof XLSX === 'undefined') {
+    showToast('กำลังโหลด SheetJS...', '');
+    setTimeout(exportReportExcel, 1500);
+    return;
+  }
 
-  // Group by Level
+  var gradeColors = {A:'1e8449', B:'1565c0', C:'e67e22', D:'e74c3c', E:'c0392b'};
+  var gradeLabels = {A:'Role Model', B:'Proactive', C:'Reliable', D:'Developing', E:'Unsatisfactory'};
+
+  function getGradeLetter(score) {
+    if (!score) return null;
+    if (score >= 4.21) return 'A';
+    if (score >= 3.41) return 'B';
+    if (score >= 2.61) return 'C';
+    if (score >= 1.81) return 'D';
+    return 'E';
+  }
+
+  function cellStyle(fgColor, fontColor, bold, rot, wrap, halign) {
+    return {
+      font: {bold:!!bold, color:{rgb: fontColor||'1A1A2E'}, name:'Arial', sz:10},
+      fill: fgColor ? {patternType:'solid', fgColor:{rgb:fgColor}} : {},
+      alignment: {horizontal:halign||'center', vertical:'center', textRotation:rot||0, wrapText:!!wrap},
+      border: {top:{style:'thin',color:{rgb:'CCCCCC'}}, bottom:{style:'thin',color:{rgb:'CCCCCC'}},
+               left:{style:'thin',color:{rgb:'CCCCCC'}}, right:{style:'thin',color:{rgb:'CCCCCC'}}}
+    };
+  }
+
+  var wb = {SheetNames:[], Sheets:{}};
+  var levelOrder = Object.keys(EVAL_DATA);
+
+  // Group users by level
   var levelGroups = {};
-  allUsers.forEach(function(id) {
-    var u = USERS[id];
-    var lk = u.level || 'Unknown';
+  Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; }).forEach(function(id) {
+    var lk = USERS[id].level || 'Unknown';
     if (!levelGroups[lk]) levelGroups[lk] = [];
     levelGroups[lk].push(id);
   });
 
-  var wb = XLSX.utils.book_new();
-  var wsData = [];
-
-  // Title row
-  wsData.push(['Performance Appraisal Review 2026', '', '', '', '', '', '', '', '', '']);
-  wsData.push(['Akara Resources', '', '', '', '', '', '', '', '', '']);
-  wsData.push([]);
-
-  // Header row (vertical text simulated with rotation via cell style)
-  wsData.push(['Emp. ID', 'Name - Surname', 'Department', 'Position', 'Level',
-    'Self Score', 'S-Level Score', 'Final Score', 'Grade', 'Label']);
-
-  // Group by Level
-  var levelOrder = Object.keys(EVAL_DATA);
   levelOrder.forEach(function(lk) {
     var ids = levelGroups[lk];
     if (!ids || ids.length === 0) return;
+    var sections = (EVAL_DATA[lk] && EVAL_DATA[lk].sections) || [];
+    var nSec = sections.length;
+    var fixedCols = 5; // EmpID, Name, Dept, Position, Level
+    var totalCols = fixedCols + nSec + 2; // +Total +Grade
 
-    // Level group header
-    wsData.push([lk, '', '', '', '', '', '', '', '', '']);
+    var ws = {};
+    var merges = [];
+    var colWidths = [];
 
-    ids.forEach(function(id) {
+    function setCell(r, c, val, style) {
+      var ref = XLSX.utils.encode_cell({r:r, c:c});
+      ws[ref] = {v: val, t: typeof val === 'number' ? 'n' : 's', s: style};
+    }
+
+    // Row 0: Title
+    setCell(0, 0, 'Performance Appraisal Review 2026 — ' + lk,
+      cellStyle('1B4BA8','FFFFFF',true,0,false,'left'));
+    merges.push({s:{r:0,c:0}, e:{r:0,c:totalCols-1}});
+
+    // Row 1: Subtitle
+    setCell(1, 0, 'Akara Resources  |  Final Evaluation Score by Section',
+      cellStyle('F8F9FA','888888',false,0,false,'left'));
+    merges.push({s:{r:1,c:0}, e:{r:1,c:totalCols-1}});
+
+    // Row 2: blank
+    // Row 3-4: headers (merged vertically for fixed, vertical text for sections)
+    var fixedHdrs = ['Emp. ID','Name - Surname','Department / ฝ่าย','Position / ตำแหน่ง','Level'];
+    fixedHdrs.forEach(function(h, ci) {
+      setCell(3, ci, h, cellStyle('1B4BA8','FFFFFF',true,0,true,'center'));
+      merges.push({s:{r:3,c:ci}, e:{r:4,c:ci}});
+    });
+
+    sections.forEach(function(sec, si) {
+      var col = fixedCols + si;
+      var label = (sec.name.en||sec.name.th) + '
+' + sec.pct + '%';
+      setCell(3, col, label, cellStyle('F5B731','FFFFFF',true,90,true,'center'));
+      merges.push({s:{r:3,c:col}, e:{r:4,c:col}});
+    });
+
+    // Total Score header
+    setCell(3, fixedCols+nSec, 'Total
+Score', cellStyle('1B4BA8','FFFFFF',true,0,true,'center'));
+    merges.push({s:{r:3,c:fixedCols+nSec}, e:{r:4,c:fixedCols+nSec}});
+
+    // Grade header
+    setCell(3, fixedCols+nSec+1, 'Grade', cellStyle('1B4BA8','FFFFFF',true,0,false,'center'));
+    merges.push({s:{r:3,c:fixedCols+nSec+1}, e:{r:4,c:fixedCols+nSec+1}});
+
+    // Data rows starting at row 5
+    ids.forEach(function(id, ri) {
+      var row = 5 + ri;
       var u = USERS[id];
       var e = evalStore[id] || {};
-      var score = e.finalTotal || null;
-      var grade = score ? getGrade(score) : null;
-      wsData.push([
-        id,
-        u.name ? u.name.th : '',
-        u.dept ? u.dept.th : '',
-        u.position ? u.position.th : '',
-        u.level || '',
-        e.selfTotal ? e.selfTotal.toFixed(2) : '—',
-        e.sTotal ? e.sTotal.toFixed(2) : '—',
-        e.finalTotal ? e.finalTotal.toFixed(2) : '—',
-        grade ? grade.letter : '—',
-        grade ? grade.label : '—',
-      ]);
+      var bg = ri % 2 === 0 ? 'EBF0FA' : 'FFFFFF';
+
+      var fixedVals = [id, u.name?u.name.th:'', u.dept?u.dept.th:'', u.position?u.position.th:'', u.level||''];
+      fixedVals.forEach(function(v, ci) {
+        setCell(row, ci, v, cellStyle(bg, '1A1A2E', false, 0, true, ci===0?'center':'left'));
+      });
+
+      // Section scores from finalScores
+      var finalScores = e.finalScores || {};
+      var total = 0;
+      sections.forEach(function(sec, si) {
+        var items = sec.items || [];
+        var secSum = 0, secCount = 0;
+        items.forEach(function(item, ii) {
+          var key = si + '_' + ii;
+          if (finalScores[key] !== undefined) {
+            secSum += finalScores[key];
+            secCount++;
+          }
+        });
+        var secAvg = secCount > 0 ? secSum / secCount : null;
+        setCell(row, fixedCols + si, secAvg ? Math.round(secAvg*100)/100 : '—',
+          cellStyle(bg, secAvg ? '1A1A2E' : '999999', false, 0, false, 'center'));
+        if (secAvg) total += secAvg * (sec.pct / 100);
+      });
+
+      // Total + Grade
+      var hasFinal = !!e.finalTotal;
+      var finalTotal = hasFinal ? e.finalTotal : null;
+      var gradeLetter = finalTotal ? getGradeLetter(finalTotal) : null;
+      var gradeColor = gradeLetter ? gradeColors[gradeLetter] : 'AAAAAA';
+
+      setCell(row, fixedCols+nSec, finalTotal ? Math.round(finalTotal*100)/100 : '—',
+        {v: finalTotal || '—', t: finalTotal?'n':'s',
+         s: cellStyle(gradeColor,'FFFFFF',true,0,false,'center')});
+
+      setCell(row, fixedCols+nSec+1,
+        gradeLetter ? (gradeLetter + ' - ' + gradeLabels[gradeLetter]) : '—',
+        {v: gradeLetter ? gradeLetter+' - '+gradeLabels[gradeLetter] : '—', t:'s',
+         s: cellStyle(gradeColor,'FFFFFF',true,0,false,'center')});
     });
-    wsData.push([]); // blank row between groups
+
+    // Col widths
+    var cws = [{wch:14},{wch:24},{wch:18},{wch:24},{wch:14}];
+    sections.forEach(function(){ cws.push({wch:7}); });
+    cws.push({wch:10}); cws.push({wch:18});
+
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:5+ids.length, c:totalCols-1}});
+    ws['!merges'] = merges;
+    ws['!cols'] = cws;
+    ws['!rows'] = [{hpt:24},{hpt:16},{hpt:6},{hpt:72},{hpt:4}];
+
+    var sheetName = lk.substring(0,31);
+    wb.SheetNames.push(sheetName);
+    wb.Sheets[sheetName] = ws;
   });
 
-  var ws = XLSX.utils.aoa_to_sheet(wsData);
-
-  // Column widths
-  ws['!cols'] = [
-    {wch:14}, {wch:22}, {wch:18}, {wch:24}, {wch:16},
-    {wch:10}, {wch:12}, {wch:11}, {wch:8}, {wch:14}
-  ];
-
-  // Style header row (row 4, index 3)
-  var headerStyle = {
-    font: {bold:true, color:{rgb:'FFFFFF'}},
-    fill: {fgColor:{rgb:'1B4BA8'}},
-    alignment: {horizontal:'center', vertical:'center', wrapText:true}
-  };
-
-  ['A4','B4','C4','D4','E4','F4','G4','H4','I4','J4'].forEach(function(cell) {
-    if (ws[cell]) {
-      ws[cell].s = headerStyle;
-    }
-  });
-
-  // Style title rows
-  ['A1','A2'].forEach(function(cell) {
-    if (ws[cell]) ws[cell].s = {font:{bold:true, sz:14, color:{rgb:'1B4BA8'}}};
-  });
-
-  // Merge title cells
-  ws['!merges'] = [
-    {s:{r:0,c:0}, e:{r:0,c:9}},
-    {s:{r:1,c:0}, e:{r:1,c:9}},
-  ];
-
-  // Style level group rows
-  var rowIdx = 4;
-  Object.keys(EVAL_DATA).forEach(function(lk) {
-    var ids = levelGroups[lk];
-    if (!ids || ids.length === 0) return;
-    rowIdx++; // group header
-    var cellRef = 'A' + rowIdx;
-    if (ws[cellRef]) {
-      ws[cellRef].s = {
-        font: {bold:true, color:{rgb:'FFFFFF'}},
-        fill: {fgColor:{rgb:'374151'}},
-      };
-    }
-    // Merge group header across all columns
-    ws['!merges'].push({s:{r:rowIdx-1,c:0}, e:{r:rowIdx-1,c:9}});
-    rowIdx += ids.length + 1; // employees + blank
-  });
-
-  XLSX.utils.book_append_sheet(wb, ws, 'Performance Report');
   XLSX.writeFile(wb, 'PerformanceAppraisal_2026_' + new Date().toISOString().slice(0,10) + '.xlsx');
-  showToast('Export Excel สำเร็จ', 'success');
+  showToast('Export Excel สำเร็จ (' + levelOrder.length + ' sheets)', 'success');
 }
 
 function exportReport(){
