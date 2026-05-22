@@ -2100,16 +2100,30 @@ function renderHrReport(){
       levelSel.appendChild(opt);
     });
   }
-  if (deptSel && deptSel.options.length <= 1) {
+  // Update first option label based on language
+  if (levelSel && levelSel.options[0]) levelSel.options[0].textContent = currentLang==='th'?'ทั้งหมด':'All';
+  if (deptSel && deptSel.options[0]) deptSel.options[0].textContent = currentLang==='th'?'ทั้งหมด / All':'All Departments';
+  var statusSel = document.getElementById('report-filter-status');
+  if (statusSel) {
+    statusSel.options[0].textContent = currentLang==='th'?'ทั้งหมด':'All';
+    if (statusSel.options[1]) statusSel.options[1].textContent = currentLang==='th'?'มี Final Score':'Has Final Score';
+    if (statusSel.options[2]) statusSel.options[2].textContent = currentLang==='th'?'ยังไม่มี Final':'No Final Yet';
+  }
+  // Always rebuild dept dropdown to reflect current language
+  if (deptSel) {
+    var currentDeptVal = deptSel.value;
+    while (deptSel.options.length > 1) deptSel.remove(1);
     var depts = {};
     Object.values(USERS).forEach(function(u) {
-      if (u.dept && u.dept.th) depts[u.dept.th] = u.dept[currentLang]||u.dept.th;
+      if (u.dept && u.dept.th) depts[u.dept.th] = {th: u.dept.th, en: u.dept.en||u.dept.th};
     });
     Object.keys(depts).sort().forEach(function(k) {
       var opt = document.createElement('option');
-      opt.value = k; opt.textContent = depts[k];
+      opt.value = k;
+      opt.textContent = depts[k][currentLang]||depts[k].th;
       deptSel.appendChild(opt);
     });
+    deptSel.value = currentDeptVal;
   }
 
   // Get filter values
@@ -2144,7 +2158,7 @@ function renderHrReport(){
 
   // Update count display
   var countEl = document.getElementById('report-count');
-  if (countEl) countEl.textContent = 'แสดง ' + totalCount + ' คน';
+  if (countEl) countEl.textContent = (currentLang==='th'?'แสดง ':'Showing ') + totalCount + (currentLang==='th'?' คน':' employees');
 
   var html = '';
 
@@ -2164,15 +2178,16 @@ function renderHrReport(){
     html += '<div style="margin-bottom:20px;">';
     // Level header
     html += '<div style="background:#374151;color:white;padding:8px 14px;font-weight:700;font-size:13px;border-radius:6px 6px 0 0;">'
-      + lk + ' <span style="font-weight:400;opacity:.7;font-size:12px;">(' + ids.length + ' คน)</span></div>';
+      + lk + ' <span style="font-weight:400;opacity:.7;font-size:12px;">(' + ids.length + (currentLang==="th"?" คน":" employees") + ')</span></div>';
 
     // Table
     html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    var isth = currentLang==='th';
     html += '<thead><tr>'
-      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">รหัส</th>'
-      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;min-width:140px;border:1px solid #C5D3F0;font-weight:700;">ชื่อ-สกุล</th>'
-      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">ฝ่าย</th>'
-      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">ตำแหน่ง</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">'+(isth?'รหัส':'Emp. ID')+'</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;min-width:140px;border:1px solid #C5D3F0;font-weight:700;">'+(isth?'ชื่อ-สกุล':'Name - Surname')+'</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">'+(isth?'ฝ่าย':'Department')+'</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">'+(isth?'ตำแหน่ง':'Position')+'</th>'
       + secHeaders
       + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Total</th>'
       + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Grade</th>'
