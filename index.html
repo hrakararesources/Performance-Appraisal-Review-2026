@@ -614,6 +614,30 @@ textarea{resize:vertical;min-height:70px;}
             <button class="btn btn-sm btn-accent" onclick="exportReportExcel()">⬇ Export Excel</button>
           </div>
         </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);">Level:</label>
+            <select id="report-filter-level" onchange="renderHrReport()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;min-width:160px;">
+              <option value="">ทั้งหมด / All</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);">ฝ่าย / Dept:</label>
+            <select id="report-filter-dept" onchange="renderHrReport()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;min-width:160px;">
+              <option value="">ทั้งหมด / All</option>
+            </select>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <label style="font-size:12px;font-weight:600;color:var(--text-muted);">สถานะ:</label>
+            <select id="report-filter-status" onchange="renderHrReport()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;min-width:140px;">
+              <option value="">ทั้งหมด</option>
+              <option value="final">มี Final Score</option>
+              <option value="no-final">ยังไม่มี Final</option>
+            </select>
+          </div>
+          <button onclick="resetReportFilters()" class="btn btn-sm btn-outline" style="font-size:12px;">✕ ล้าง Filter</button>
+          <span id="report-count" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
+        </div>
         <div class="emp-table-wrap">
           <div id="report-table-wrap"></div>
         </div>
@@ -2057,20 +2081,70 @@ async function toggleEmpActive(id,activate){
   renderHrEmpList();renderHrDashboard();
 }
 // ── HR REPORT ──
+function resetReportFilters() {
+  ['report-filter-level','report-filter-dept','report-filter-status'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  renderHrReport();
+}
+
 function renderHrReport(){
+  // Populate filter dropdowns
+  var levelSel = document.getElementById('report-filter-level');
+  var deptSel = document.getElementById('report-filter-dept');
+  if (levelSel && levelSel.options.length <= 1) {
+    Object.keys(EVAL_DATA).forEach(function(lk) {
+      var opt = document.createElement('option');
+      opt.value = lk; opt.textContent = lk;
+      levelSel.appendChild(opt);
+    });
+  }
+  if (deptSel && deptSel.options.length <= 1) {
+    var depts = {};
+    Object.values(USERS).forEach(function(u) {
+      if (u.dept && u.dept.th) depts[u.dept.th] = u.dept[currentLang]||u.dept.th;
+    });
+    Object.keys(depts).sort().forEach(function(k) {
+      var opt = document.createElement('option');
+      opt.value = k; opt.textContent = depts[k];
+      deptSel.appendChild(opt);
+    });
+  }
+
+  // Get filter values
+  var filterLevel = levelSel ? levelSel.value : '';
+  var filterDept = deptSel ? deptSel.value : '';
+  var filterStatus = document.getElementById('report-filter-status') ? document.getElementById('report-filter-status').value : '';
+
   var wrap = document.getElementById('report-table-wrap');
   if (!wrap) return;
 
   var gradeColors = {A:'#1e8449',B:'#1565c0',C:'#e67e22',D:'#e74c3c',E:'#c0392b'};
   var levelOrder = Object.keys(EVAL_DATA);
 
-  // Group users by level
+  // Group users by level - apply filters
   var levelGroups = {};
+  var totalCount = 0;
   Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; }).forEach(function(id) {
-    var lk = USERS[id].level||'Unknown';
+    var u = USERS[id];
+    var lk = u.level||'Unknown';
+    var e = evalStore[id]||{};
+
+    // Apply filters
+    if (filterLevel && lk !== filterLevel) return;
+    if (filterDept && (!u.dept || u.dept.th !== filterDept)) return;
+    if (filterStatus === 'final' && !e.finalTotal) return;
+    if (filterStatus === 'no-final' && e.finalTotal) return;
+
     if (!levelGroups[lk]) levelGroups[lk] = [];
     levelGroups[lk].push(id);
+    totalCount++;
   });
+
+  // Update count display
+  var countEl = document.getElementById('report-count');
+  if (countEl) countEl.textContent = 'แสดง ' + totalCount + ' คน';
 
   var html = '';
 
@@ -2081,7 +2155,7 @@ function renderHrReport(){
 
     // Section headers (vertical text via CSS writing-mode)
     var secHeaders = secs.map(function(sec) {
-      return '<th style="padding:6px 4px;background:#F5B731;color:white;font-size:11px;font-weight:700;min-width:50px;max-width:60px;word-break:break-word;text-align:center;">'
+      return '<th style="padding:6px 4px;background:#FFF8E7;color:#7B5200;font-size:11px;font-weight:700;min-width:50px;max-width:60px;word-break:break-word;text-align:center;border:1px solid #F5B731;">'
         +'<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;">'
         +(sec.name[currentLang]||sec.name.th)+'<br/><span style="opacity:.8;">'+sec.pct+'%</span>'
         +'</div></th>';
@@ -2095,13 +2169,13 @@ function renderHrReport(){
     // Table
     html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
     html += '<thead><tr>'
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;white-space:nowrap;">รหัส</th>'
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;min-width:140px;">ชื่อ-สกุล</th>'
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;">ฝ่าย</th>'
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;">ตำแหน่ง</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">รหัส</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;min-width:140px;border:1px solid #C5D3F0;font-weight:700;">ชื่อ-สกุล</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">ฝ่าย</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;font-weight:700;">ตำแหน่ง</th>'
       + secHeaders
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:center;white-space:nowrap;">Total</th>'
-      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:center;white-space:nowrap;">Grade</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Total</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Grade</th>'
       + '</tr></thead><tbody>';
 
     ids.forEach(function(id, ri) {
