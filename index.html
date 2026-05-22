@@ -2078,152 +2078,109 @@ function exportReportExcel() {
   var gradeColors = {A:'1e8449', B:'1565c0', C:'e67e22', D:'e74c3c', E:'c0392b'};
   var gradeLabels = {A:'Role Model', B:'Proactive', C:'Reliable', D:'Developing', E:'Unsatisfactory'};
 
-  function getGradeLetter(score) {
-    if (!score) return null;
-    if (score >= 4.21) return 'A';
-    if (score >= 3.41) return 'B';
-    if (score >= 2.61) return 'C';
-    if (score >= 1.81) return 'D';
-    return 'E';
+  function getGL(s) {
+    if (!s) return null;
+    if (s>=4.21) return 'A'; if (s>=3.41) return 'B';
+    if (s>=2.61) return 'C'; if (s>=1.81) return 'D'; return 'E';
   }
 
-  function cellStyle(fgColor, fontColor, bold, rot, wrap, halign) {
+  function cs(fg, fc, bold, rot, wrap, ha) {
     return {
-      font: {bold:!!bold, color:{rgb: fontColor||'1A1A2E'}, name:'Arial', sz:10},
-      fill: fgColor ? {patternType:'solid', fgColor:{rgb:fgColor}} : {},
-      alignment: {horizontal:halign||'center', vertical:'center', textRotation:rot||0, wrapText:!!wrap},
-      border: {top:{style:'thin',color:{rgb:'CCCCCC'}}, bottom:{style:'thin',color:{rgb:'CCCCCC'}},
-               left:{style:'thin',color:{rgb:'CCCCCC'}}, right:{style:'thin',color:{rgb:'CCCCCC'}}}
+      font: {bold:!!bold, color:{rgb:fc||'1A1A2E'}, name:'Arial', sz:10},
+      fill: fg ? {patternType:'solid', fgColor:{rgb:fg}} : {},
+      alignment: {horizontal:ha||'center', vertical:'center', textRotation:rot||0, wrapText:!!wrap},
+      border: {top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},
+               left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
     };
   }
 
-  var wb = {SheetNames:[], Sheets:{}};
-  var levelOrder = Object.keys(EVAL_DATA);
+  function setCell(ws, r, c, val, style) {
+    var ref = XLSX.utils.encode_cell({r:r, c:c});
+    ws[ref] = {v:val, t:typeof val==='number'?'n':'s', s:style};
+  }
 
-  // Group users by level
+  var wb = {SheetNames:[], Sheets:{}};
   var levelGroups = {};
   Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; }).forEach(function(id) {
-    var lk = USERS[id].level || 'Unknown';
+    var lk = USERS[id].level||'Unknown';
     if (!levelGroups[lk]) levelGroups[lk] = [];
     levelGroups[lk].push(id);
   });
 
-  levelOrder.forEach(function(lk) {
+  Object.keys(EVAL_DATA).forEach(function(lk) {
     var ids = levelGroups[lk];
-    if (!ids || ids.length === 0) return;
-    var sections = (EVAL_DATA[lk] && EVAL_DATA[lk].sections) || [];
-    var nSec = sections.length;
-    var fixedCols = 5; // EmpID, Name, Dept, Position, Level
-    var totalCols = fixedCols + nSec + 2; // +Total +Grade
-
+    if (!ids || ids.length===0) return;
+    var secs = (EVAL_DATA[lk]&&EVAL_DATA[lk].sections)||[];
+    var nSec = secs.length;
+    var FC = 5;
     var ws = {};
     var merges = [];
-    var colWidths = [];
 
-    function setCell(r, c, val, style) {
-      var ref = XLSX.utils.encode_cell({r:r, c:c});
-      ws[ref] = {v: val, t: typeof val === 'number' ? 'n' : 's', s: style};
-    }
+    // Title
+    setCell(ws,0,0,'Performance Appraisal Review 2026 - '+lk, cs('1B4BA8','FFFFFF',true,0,false,'left'));
+    merges.push({s:{r:0,c:0},e:{r:0,c:FC+nSec+1}});
+    setCell(ws,1,0,'Akara Resources | Final Evaluation Score by Section', cs('F8F9FA','888888',false,0,false,'left'));
+    merges.push({s:{r:1,c:0},e:{r:1,c:FC+nSec+1}});
 
-    // Row 0: Title
-    setCell(0, 0, 'Performance Appraisal Review 2026 — ' + lk,
-      cellStyle('1B4BA8','FFFFFF',true,0,false,'left'));
-    merges.push({s:{r:0,c:0}, e:{r:0,c:totalCols-1}});
-
-    // Row 1: Subtitle
-    setCell(1, 0, 'Akara Resources  |  Final Evaluation Score by Section',
-      cellStyle('F8F9FA','888888',false,0,false,'left'));
-    merges.push({s:{r:1,c:0}, e:{r:1,c:totalCols-1}});
-
-    // Row 2: blank
-    // Row 3-4: headers (merged vertically for fixed, vertical text for sections)
-    var fixedHdrs = ['Emp. ID','Name - Surname','Department / ฝ่าย','Position / ตำแหน่ง','Level'];
-    fixedHdrs.forEach(function(h, ci) {
-      setCell(3, ci, h, cellStyle('1B4BA8','FFFFFF',true,0,true,'center'));
-      merges.push({s:{r:3,c:ci}, e:{r:4,c:ci}});
+    // Fixed headers
+    ['Emp. ID','Name - Surname','Department','Position','Level'].forEach(function(h,ci) {
+      setCell(ws,3,ci,h,cs('1B4BA8','FFFFFF',true,0,true,'center'));
+      merges.push({s:{r:3,c:ci},e:{r:4,c:ci}});
     });
 
-    sections.forEach(function(sec, si) {
-      var col = fixedCols + si;
-      var label = (sec.name.en||sec.name.th) + '
-' + sec.pct + '%';
-      setCell(3, col, label, cellStyle('F5B731','FFFFFF',true,90,true,'center'));
-      merges.push({s:{r:3,c:col}, e:{r:4,c:col}});
+    // Section headers - vertical text
+    secs.forEach(function(sec,si) {
+      var nm = (sec.name.en||sec.name.th)+' '+sec.pct+'%';
+      setCell(ws,3,FC+si,nm,cs('F5B731','FFFFFF',true,90,true,'center'));
+      merges.push({s:{r:3,c:FC+si},e:{r:4,c:FC+si}});
     });
 
-    // Total Score header
-    setCell(3, fixedCols+nSec, 'Total
-Score', cellStyle('1B4BA8','FFFFFF',true,0,true,'center'));
-    merges.push({s:{r:3,c:fixedCols+nSec}, e:{r:4,c:fixedCols+nSec}});
+    setCell(ws,3,FC+nSec,'Total Score',cs('1B4BA8','FFFFFF',true,0,true,'center'));
+    merges.push({s:{r:3,c:FC+nSec},e:{r:4,c:FC+nSec}});
+    setCell(ws,3,FC+nSec+1,'Grade',cs('1B4BA8','FFFFFF',true,0,false,'center'));
+    merges.push({s:{r:3,c:FC+nSec+1},e:{r:4,c:FC+nSec+1}});
 
-    // Grade header
-    setCell(3, fixedCols+nSec+1, 'Grade', cellStyle('1B4BA8','FFFFFF',true,0,false,'center'));
-    merges.push({s:{r:3,c:fixedCols+nSec+1}, e:{r:4,c:fixedCols+nSec+1}});
-
-    // Data rows starting at row 5
-    ids.forEach(function(id, ri) {
-      var row = 5 + ri;
+    // Data rows
+    ids.forEach(function(id,ri) {
+      var row = 5+ri;
       var u = USERS[id];
-      var e = evalStore[id] || {};
-      var bg = ri % 2 === 0 ? 'EBF0FA' : 'FFFFFF';
-
-      var fixedVals = [id, u.name?u.name.th:'', u.dept?u.dept.th:'', u.position?u.position.th:'', u.level||''];
-      fixedVals.forEach(function(v, ci) {
-        setCell(row, ci, v, cellStyle(bg, '1A1A2E', false, 0, true, ci===0?'center':'left'));
+      var e = evalStore[id]||{};
+      var bg = ri%2===0?'EBF0FA':'FFFFFF';
+      [id, u.name?u.name.th:'', u.dept?u.dept.th:'', u.position?u.position.th:'', u.level||''].forEach(function(v,ci) {
+        setCell(ws,row,ci,v,cs(bg,'1A1A2E',false,0,true,ci===0?'center':'left'));
       });
-
-      // Section scores from finalScores
-      var finalScores = e.finalScores || {};
-      var total = 0;
-      sections.forEach(function(sec, si) {
-        var items = sec.items || [];
-        var secSum = 0, secCount = 0;
-        items.forEach(function(item, ii) {
-          var key = si + '_' + ii;
-          if (finalScores[key] !== undefined) {
-            secSum += finalScores[key];
-            secCount++;
-          }
+      var fs = e.finalScores||{};
+      secs.forEach(function(sec,si) {
+        var items = sec.items||[];
+        var sum=0, cnt=0;
+        items.forEach(function(item,ii) {
+          var k = si+'_'+ii;
+          if (fs[k]!==undefined){sum+=fs[k];cnt++;}
         });
-        var secAvg = secCount > 0 ? secSum / secCount : null;
-        setCell(row, fixedCols + si, secAvg ? Math.round(secAvg*100)/100 : '—',
-          cellStyle(bg, secAvg ? '1A1A2E' : '999999', false, 0, false, 'center'));
-        if (secAvg) total += secAvg * (sec.pct / 100);
+        var avg = cnt>0?Math.round(sum/cnt*100)/100:null;
+        setCell(ws,row,FC+si,avg||'—',cs(bg,avg?'1A1A2E':'999999',false,0,false,'center'));
       });
-
-      // Total + Grade
-      var hasFinal = !!e.finalTotal;
-      var finalTotal = hasFinal ? e.finalTotal : null;
-      var gradeLetter = finalTotal ? getGradeLetter(finalTotal) : null;
-      var gradeColor = gradeLetter ? gradeColors[gradeLetter] : 'AAAAAA';
-
-      setCell(row, fixedCols+nSec, finalTotal ? Math.round(finalTotal*100)/100 : '—',
-        {v: finalTotal || '—', t: finalTotal?'n':'s',
-         s: cellStyle(gradeColor,'FFFFFF',true,0,false,'center')});
-
-      setCell(row, fixedCols+nSec+1,
-        gradeLetter ? (gradeLetter + ' - ' + gradeLabels[gradeLetter]) : '—',
-        {v: gradeLetter ? gradeLetter+' - '+gradeLabels[gradeLetter] : '—', t:'s',
-         s: cellStyle(gradeColor,'FFFFFF',true,0,false,'center')});
+      var ft = e.finalTotal||null;
+      var gl = getGL(ft);
+      var gc = gl?gradeColors[gl]:'AAAAAA';
+      setCell(ws,row,FC+nSec,ft?Math.round(ft*100)/100:'—',cs(gc,'FFFFFF',true,0,false,'center'));
+      setCell(ws,row,FC+nSec+1,gl?(gl+' - '+gradeLabels[gl]):'—',cs(gc,'FFFFFF',true,0,false,'center'));
     });
 
-    // Col widths
-    var cws = [{wch:14},{wch:24},{wch:18},{wch:24},{wch:14}];
-    sections.forEach(function(){ cws.push({wch:7}); });
-    cws.push({wch:10}); cws.push({wch:18});
-
-    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:5+ids.length, c:totalCols-1}});
+    var cws = [{wch:14},{wch:24},{wch:18},{wch:24},{wch:12}];
+    secs.forEach(function(){cws.push({wch:7});});
+    cws.push({wch:11},{wch:16});
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:5+ids.length,c:FC+nSec+1}});
     ws['!merges'] = merges;
     ws['!cols'] = cws;
-    ws['!rows'] = [{hpt:24},{hpt:16},{hpt:6},{hpt:72},{hpt:4}];
-
-    var sheetName = lk.substring(0,31);
-    wb.SheetNames.push(sheetName);
-    wb.Sheets[sheetName] = ws;
+    ws['!rows'] = [{hpt:22},{hpt:14},{hpt:6},{hpt:70},{hpt:4}];
+    var sn = lk.substring(0,31);
+    wb.SheetNames.push(sn);
+    wb.Sheets[sn] = ws;
   });
 
-  XLSX.writeFile(wb, 'PerformanceAppraisal_2026_' + new Date().toISOString().slice(0,10) + '.xlsx');
-  showToast('Export Excel สำเร็จ (' + levelOrder.length + ' sheets)', 'success');
+  XLSX.writeFile(wb,'PerformanceAppraisal_2026_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('Export Excel สำเร็จ','success');
 }
 
 function exportReport(){
