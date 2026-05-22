@@ -1677,6 +1677,7 @@ function renderGradeDistChart() {
       afterDatasetsDraw: function(chart) {
         var ctx2 = chart.ctx;
         var topY = chart.scales.y.top + 14;
+        var bottomY = chart.scales.y.bottom;
         chart.data.datasets.forEach(function(dataset, i) {
           if (dataset.type === 'line') return;
           var meta = chart.getDatasetMeta(i);
@@ -1684,10 +1685,20 @@ function renderGradeDistChart() {
             var val = dataset.data[index];
             if (val === 0) return;
             ctx2.save();
-            ctx2.fillStyle = '#374151';
             ctx2.font = 'bold 11px Arial';
             ctx2.textAlign = 'center';
-            var labelY = Math.max(bar.y - 6, topY);
+            var barHeight = bottomY - bar.y;
+            var labelY, textColor;
+            if (barHeight > 20) {
+              // Inside bar at top
+              labelY = Math.max(bar.y + 16, topY + 2);
+              textColor = 'white';
+            } else {
+              // Above bar
+              labelY = Math.max(bar.y - 5, topY);
+              textColor = '#374151';
+            }
+            ctx2.fillStyle = textColor;
             ctx2.fillText(val.toFixed(0) + '%', bar.x, labelY);
             ctx2.restore();
           });
@@ -1732,11 +1743,11 @@ function renderGradeDistChart() {
     var gcols = { A: '#1e8449', B: '#1565c0', C: '#e67e22', D: '#e74c3c', E: '#c0392b' };
     var glabels = { A: 'Role Model', B: 'Proactive', C: 'Reliable', D: 'Developing', E: 'Unsatisfactory' };
     var gtarget = { A: 10, B: 20, C: 40, D: 20, E: 10 };
-    legend.innerHTML = grades.map(function(g, gi) {
+    legend.innerHTML = ['A','B','C','D','E'].map(function(g, gi) {
       var pct = actualPct[gi];
       return '<div style="display:flex;align-items:center;gap:6px;font-size:11px;">'
-        + '<span style="width:10px;height:10px;border-radius:2px;background:#1B4BA8;display:inline-block;flex-shrink:0;"></span>'
-        + '<span style="font-weight:700;color:var(--primary);">'+g+'</span>'
+        + '<span style="width:10px;height:10px;border-radius:2px;background:'+gcols[g]+';display:inline-block;flex-shrink:0;"></span>'
+        + '<span style="font-weight:700;color:'+gcols[g]+';">'+g+'</span>'
         + '<span style="color:var(--text-muted);">'+glabels[g]+'</span>'
         + '<span style="font-weight:600;color:'+(pct>0?gcols[g]:'var(--text-muted)')+';">'+pct+'%</span>'
         + '<span style="color:var(--text-muted);font-size:10px;">(target:'+gtarget[g]+'%)</span>'
