@@ -553,21 +553,6 @@ textarea{resize:vertical;min-height:70px;}
       </div>
     </div>
 
-    <!-- PROPOSAL DETAIL MODAL -->
-    <div class="modal-overlay hidden" id="modal-proposal-detail">
-      <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;padding:0;">
-        <div class="modal-header" style="padding:1rem 1.25rem;">
-          <div class="modal-title" id="proposal-detail-title">รายละเอียดข้อเสนอ</div>
-          <button onclick="closeModal('modal-proposal-detail')" class="btn btn-sm btn-outline">✕</button>
-        </div>
-        <div id="proposal-detail-body" style="padding:16px;"></div>
-        <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
-          <button onclick="printProposalDetail()" class="btn btn-primary">🖨 พิมพ์ / Print</button>
-          <button onclick="closeModal('modal-proposal-detail')" class="btn btn-outline">ปิด / Close</button>
-        </div>
-      </div>
-    </div>
-
     <!-- MY RESULT -->
     <div class="page" id="page-my-result">
       <div id="my-result-content"></div>
@@ -1290,10 +1275,7 @@ async function loadFromSheets() {
       }
     } catch(e) { console.warn('ScoreDescConfig load failed:', e); }
 
-    try {
-      var pr = await gasRun('getProposals');
-      if (pr && pr.proposals) proposalStore = pr.proposals;
-    } catch(e) { console.warn('Proposals load:', e); }
+    try { var pr = await gasRun('getProposals'); if (pr && pr.proposals) proposalStore = pr.proposals; } catch(e) {}
     GAS_READY = true;
     hideSplash();
   } catch(err) {
@@ -1585,13 +1567,13 @@ function showEmpProposals(empId) {
   var title = document.getElementById('proposal-detail-title');
   var body = document.getElementById('proposal-detail-body');
   if (!modal||!body) return;
-  if (title) title.textContent = (currentLang==='th'?'ข้อเสนอทั้งหมดของ ':'All proposals for ')+(u.name?u.name[currentLang]||u.name.th:empId);
+  if (title) title.textContent = (currentLang==='th'?'ข้อเสนอของ ':'Proposals for ')+(u.name?u.name[currentLang]||u.name.th:empId);
   body.innerHTML = list.map(function(p){
-    var date = p.created_at?p.created_at.substring(0,10):'—';
+    var date = p.created_at?p.created_at.substring(0,10):'';
     var tl = p.proposal_type==='promotion'?'เลื่อนตำแหน่ง':'ปรับพิเศษ';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#F8FAFF;">'
       +'<div><div style="font-weight:600;">'+tl+'</div><div style="font-size:12px;color:#64748b;">'+date+'</div></div>'
-      +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button>'
+      +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">รายละเอียด</button>'
       +'</div>';
   }).join('');
   modal.classList.remove('hidden');
@@ -1600,11 +1582,11 @@ function showEmpProposals(empId) {
 function renderProposalList() {
   var wrap = document.getElementById('proposal-list-wrap');
   if (!wrap) return;
-  var ft = document.getElementById('proposal-filter-type') ? document.getElementById('proposal-filter-type').value : '';
+  var ft = (document.getElementById('proposal-filter-type')||{}).value || '';
   var list = proposalStore.filter(function(p){ return !ft || p.proposal_type===ft; });
   list.sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
   var cnt = document.getElementById('proposal-count');
-  if (cnt) cnt.textContent = (currentLang==='th'?'ทั้งหมด ':'Total ')+list.length+(currentLang==='th'?' รายการ':' proposals');
+  if (cnt) cnt.textContent = list.length + (currentLang==='th'?' รายการ':' proposals');
   if (list.length===0) { wrap.innerHTML='<p style="color:var(--text-muted);padding:2rem;text-align:center;">ยังไม่มีข้อเสนอ</p>'; return; }
   var typeColors={promotion:'1565c0',special:'e67e22'};
   var typeLabels={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
@@ -1614,8 +1596,8 @@ function renderProposalList() {
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">พนักงาน</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">ตำแหน่งปัจจุบัน</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">ตำแหน่งที่เสนอ</th>'
-    +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;text-align:center;">ประเภท</th>'
-    +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;text-align:center;">เสนอโดย</th>'
+    +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">ประเภท</th>'
+    +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">เสนอโดย</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;"></th>'
     +'</tr></thead><tbody>'
     +list.map(function(p,ri){
@@ -1624,19 +1606,18 @@ function renderProposalList() {
       var bg=ri%2===0?'#F8FAFF':'#FFFFFF';
       var tc=typeColors[p.proposal_type]||'666666';
       var tl=typeLabels[p.proposal_type]||p.proposal_type;
-      var date=p.created_at?p.created_at.substring(0,10):'—';
+      var date=p.created_at?p.created_at.substring(0,10):'';
       return '<tr>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;color:#64748b;font-size:12px;">'+date+'</td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:p.emp_id)+'<br><span style="font-size:10px;color:#64748b;">'+p.emp_id+'</span></td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;">'+(p.current_position||'—')+'</td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;font-weight:600;color:#1B4BA8;">'+(p.proposed_position||'—')+'</td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+date+'</td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:p.emp_id)+'</td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;">'+(p.current_position||'')+' </td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;color:#1B4BA8;">'+(p.proposed_position||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'—')+'</td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
         +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button></td>'
         +'</tr>';
-    }).join('')
-    +'</tbody></table>';
+    }).join('')+'</tbody></table>';
 }
 
 function showProposalDetail(propId) {
@@ -1644,38 +1625,30 @@ function showProposalDetail(propId) {
   if (!p) return;
   var u=USERS[p.emp_id]||{};
   var proposer=USERS[p.proposed_by]||{};
-  var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง (Promotion)':'ปรับพิเศษ (Special Adjustment)';
+  var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง':'ปรับพิเศษ';
   var body=document.getElementById('proposal-detail-body');
   var title=document.getElementById('proposal-detail-title');
   if (title) title.textContent=typeLabel+' — '+(u.name?u.name.th:p.emp_id);
   if (!body) return;
-  var sections=[
-    {label:'Part A: ข้อมูลพนักงาน', items:[
-      {l:'รหัสพนักงาน',v:p.emp_id},
-      {l:'ชื่อ-สกุล',v:u.name?u.name.th:p.emp_id},
-      {l:'ตำแหน่งปัจจุบัน',v:p.current_position||'—'},
-      {l:'ตำแหน่งที่เสนอ',v:p.proposed_position||'—'},
-      {l:'เสนอโดย',v:proposer.name?proposer.name.th:p.proposed_by||'—'},
-      {l:'วันที่เสนอ',v:p.created_at?p.created_at.substring(0,10):'—'},
-    ]},
+  var rows=[
+    ['รหัสพนักงาน', p.emp_id],
+    ['ชื่อ-สกุล', u.name?u.name.th:p.emp_id],
+    ['ตำแหน่งปัจจุบัน', p.current_position||''],
+    ['ตำแหน่งที่เสนอ', p.proposed_position||''],
+    ['เสนอโดย', proposer.name?proposer.name.th:p.proposed_by||''],
+    ['วันที่', p.created_at?p.created_at.substring(0,10):''],
+    ['จุดแข็ง', p.key_strengths||''],
+    ['ผลงานสำคัญ', p.achievement||''],
+    ['โครงการพิเศษ', p.special_project||''],
+    ['จุดที่ต้องพัฒนา', p.to_be_developed||''],
+    ['ความคาดหวัง / เหตุผล', p.expectation||''],
   ];
-  if (p.proposal_type==='promotion') {
-    sections.push({label:'Part B: จุดแข็งและศักยภาพ',items:[{l:'จุดแข็ง',v:p.key_strengths||'—'}]});
-    sections.push({label:'Part C: ผลงานโดดเด่น',items:[{l:'ผลงานสำคัญ',v:p.achievement||'—'},{l:'โครงการพิเศษ',v:p.special_project||'—'}]});
-  }
-  sections.push({label:p.proposal_type==='promotion'?'Part D: จุดที่ต้องพัฒนา':'Part B: รายละเอียด',items:[{l:'จุดที่ต้องพัฒนา',v:p.to_be_developed||'—'}]});
-  sections.push({label:p.proposal_type==='promotion'?'Part E: ความคาดหวัง':'Part C: เหตุผล',items:[{l:p.proposal_type==='promotion'?'ความคาดหวัง':'เหตุผล',v:p.expectation||'—'}]});
-  body.innerHTML=sections.map(function(sec){
-    return '<div style="margin-bottom:14px;">'
-      +'<div style="background:#1B4BA8;color:white;padding:6px 12px;font-weight:700;font-size:13px;border-radius:4px 4px 0 0;">'+sec.label+'</div>'
-      +'<div style="border:1px solid #C5D3F0;border-top:none;border-radius:0 0 4px 4px;">'
-      +sec.items.map(function(item,i){
-        var bg=i%2===0?'#F8FAFF':'#FFFFFF';
-        return '<div style="display:flex;gap:12px;padding:8px 12px;background:'+bg+';border-bottom:1px solid #e5e7eb;">'
-          +'<div style="width:160px;font-size:12px;font-weight:600;color:#64748b;flex-shrink:0;">'+item.l+'</div>'
-          +'<div style="font-size:13px;color:#1A1A2E;flex:1;white-space:pre-wrap;">'+item.v+'</div>'
-          +'</div>';
-      }).join('')+'</div></div>';
+  body.innerHTML = rows.filter(function(r){ return r[1]; }).map(function(r,i){
+    var bg=i%2===0?'#F8FAFF':'#FFFFFF';
+    return '<div style="display:flex;gap:12px;padding:8px 12px;background:'+bg+';border-bottom:1px solid #e5e7eb;">'
+      +'<div style="width:180px;font-size:12px;font-weight:600;color:#64748b;flex-shrink:0;">'+r[0]+'</div>'
+      +'<div style="font-size:13px;color:#1A1A2E;white-space:pre-wrap;">'+r[1]+'</div>'
+      +'</div>';
   }).join('');
   document.getElementById('modal-proposal-detail').classList.remove('hidden');
 }
@@ -1684,9 +1657,7 @@ function printProposalDetail() {
   var body=document.getElementById('proposal-detail-body');
   var title=document.getElementById('proposal-detail-title');
   if (!body) return;
-  var w=window.open('','_blank');
-  w.document.write('<html><head><title>'+title.textContent+'</title><style>body{font-family:TH Sarabun New,Arial;padding:20px;}</style></head><body><h2>'+title.textContent+'</h2>'+body.innerHTML+'<script>window.print();<\/script></body></html>');
-  w.document.close();
+  window.open('data:text/html,<h2>'+encodeURIComponent(title.textContent)+'</h2>'+encodeURIComponent(body.innerHTML));
 }
 
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
@@ -2040,7 +2011,7 @@ function renderEvalOthers(){
   const rows=subs.map(sid=>{
     const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
     const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button> <button class=\\\"btn btn-sm btn-outline\\\" style=\\\"font-size:11px;padding:3px 7px;\\\" onclick=\\\"showEmpProposals(\\x27"+(sid)+"\\x27)\\\">&#x1F4CB;</button>":"")+"</td>\n    </tr>");
+    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
   });
   container.innerHTML=("<table><thead><tr><th>"+(t('th-code'))+"</th><th>"+(t('th-name'))+"</th><th>"+(t('th-dept'))+"</th><th>"+(t('th-pos'))+"</th><th>Level</th><th>Self</th><th></th></tr></thead><tbody>"+(rows.join(''))+"</tbody></table>");
 }
@@ -3958,6 +3929,21 @@ window.addEventListener('DOMContentLoaded',()=>{
     <div style="display:flex;gap:10px;justify-content:flex-end;">
       <button onclick="document.getElementById('modal-import-result').style.display='none'" class="btn btn-outline">ยกเลิก</button>
       <button id="import-confirm-btn" onclick="confirmImport()" class="btn btn-primary">นำเข้าข้อมูล</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROPOSAL DETAIL MODAL -->
+<div class="modal-overlay hidden" id="modal-proposal-detail">
+  <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;padding:0;">
+    <div class="modal-header" style="padding:1rem 1.25rem;">
+      <div class="modal-title" id="proposal-detail-title">รายละเอียดข้อเสนอ</div>
+      <button onclick="closeModal('modal-proposal-detail')" class="btn btn-sm btn-outline">X</button>
+    </div>
+    <div id="proposal-detail-body" style="padding:16px;"></div>
+    <div style="padding:12px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;">
+      <button onclick="printProposalDetail()" class="btn btn-primary">Print</button>
+      <button onclick="closeModal('modal-proposal-detail')" class="btn btn-outline">Close</button>
     </div>
   </div>
 </div>
