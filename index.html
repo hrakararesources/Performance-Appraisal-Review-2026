@@ -430,17 +430,7 @@ textarea{resize:vertical;min-height:70px;}
         </div>
       </div>
       <div class="stat-grid" id="home-stats"></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
-        <div class="card">
-          <div class="card-header"><div class="card-title" id="t-eval-steps">ขั้นตอนการประเมิน</div></div>
-          <div class="tl" id="eval-timeline"></div>
-        </div>
-        <div class="card">
-          <div class="card-header"><div class="card-title" id="t-grade-criteria">เกณฑ์การให้เกรด</div></div>
-          <div id="grade-criteria"></div>
-        </div>
-      </div>
-    </div>
+
 
     <!-- SELF EVAL -->
     <div class="page" id="page-self-eval">
@@ -1631,13 +1621,14 @@ function renderGradeDistChart() {
       var label = isth2 ? g.labelTh : g.labelEn;
       var desc = isth2 ? g.descTh : g.descEn;
       var letter = ['A','B','C','D','E'][i];
+      var rangeSuffix = isth2 ? ' คะแนน' : ' Point';
       return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">'
         + '<div style="width:24px;height:24px;border-radius:50%;background:'+g.color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
         + '<span style="font-size:11px;font-weight:700;color:'+g.color+';">'+letter+'</span></div>'
         + '<div style="flex:1;">'
         + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
         + '<span style="font-size:12px;font-weight:700;color:'+g.color+';">'+label+'</span>'
-        + '<span style="font-size:10px;color:var(--text-muted);margin-left:6px;white-space:nowrap;">'+g.range+'</span>'
+        + '<span style="font-size:10px;color:'+g.color+';margin-left:6px;white-space:nowrap;font-weight:600;">'+g.range+rangeSuffix+'</span>'
         + '</div>'
         + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">'+desc+'</div>'
         + '</div></div>';
