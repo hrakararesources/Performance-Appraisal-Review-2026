@@ -1,4 +1,4 @@
-<!DOCTYP <button class=\\\"btn btn-sm btn-outline\\\" style=\\\"font-size:11px;\\\" onclick=\\\"showEmpProposals(\\x27"+(sid)+"\\x27)\\\">View</button>E html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
 <meta charset="UTF-8">
@@ -538,14 +538,12 @@ textarea{resize:vertical;min-height:70px;}
     <!-- HR PROPOSALS -->
     <div class="page" id="page-hr-proposals">
       <div class="card">
-        <div class="card-header">
-          <div class="card-title">ข้อเสนอปรับ / Proposals</div>
-        </div>
+        <div class="card-header"><div class="card-title">ข้อเสนอปรับ / Proposals</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <select id="proposal-filter-type" onchange="renderProposalList()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;">
             <option value="">ทั้งหมด / All</option>
-            <option value="promotion">เลื่อนตำแหน่ง / Promotion</option>
-            <option value="special">ปรับพิเศษ / Special Adjustment</option>
+            <option value="promotion">เลื่อนตำแหน่ง</option>
+            <option value="special">ปรับพิเศษ</option>
           </select>
           <span id="proposal-count" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
         </div>
@@ -1587,11 +1585,10 @@ function renderProposalList() {
   list.sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
   var cnt = document.getElementById('proposal-count');
   if (cnt) cnt.textContent = list.length + (currentLang==='th'?' รายการ':' proposals');
-  if (list.length===0) { wrap.innerHTML='<p style="color:var(--text-muted);padding:2rem;text-align:center;">ยังไม่มีข้อเสนอ</p>'; return; }
-  var typeColors={promotion:'1565c0',special:'e67e22'};
-  var typeLabels={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
-  wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;">'
-    +'<thead><tr>'
+  if (!list.length) { wrap.innerHTML='<p style="color:var(--text-muted);padding:2rem;text-align:center;">ยังไม่มีข้อเสนอ</p>'; return; }
+  var tc={promotion:'1565c0',special:'e67e22'};
+  var tl={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
+  wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">วันที่</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">พนักงาน</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">ตำแหน่งปัจจุบัน</th>'
@@ -1604,15 +1601,13 @@ function renderProposalList() {
       var u=USERS[p.emp_id]||{};
       var proposer=USERS[p.proposed_by]||{};
       var bg=ri%2===0?'#F8FAFF':'#FFFFFF';
-      var tc=typeColors[p.proposal_type]||'666666';
-      var tl=typeLabels[p.proposal_type]||p.proposal_type;
       var date=p.created_at?p.created_at.substring(0,10):'';
       return '<tr>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+date+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:p.emp_id)+'</td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;">'+(p.current_position||'')+' </td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;">'+(p.current_position||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;color:#1B4BA8;">'+(p.proposed_position||'')+'</td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc[p.proposal_type]+'22;color:#'+tc[p.proposal_type]+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+(tl[p.proposal_type]||p.proposal_type)+'</span></td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
         +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button></td>'
@@ -1625,49 +1620,34 @@ function showProposalDetail(propId) {
   if (!p) return;
   var u=USERS[p.emp_id]||{};
   var proposer=USERS[p.proposed_by]||{};
-  var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง (Promotion)':'ปรับพิเศษ (Special Adjustment)';
   var body=document.getElementById('proposal-detail-body');
   var title=document.getElementById('proposal-detail-title');
+  var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง (Promotion)':'ปรับพิเศษ (Special Adjustment)';
   if (title) title.textContent=typeLabel+' — '+(u.name?u.name.th:p.emp_id);
   if (!body) return;
-
-  function section(label, items) {
-    var rows = items.filter(function(r){ return r[1]; }).map(function(r,i){
-      var bg=i%2===0?'#F8FAFF':'#FFFFFF';
-      return '<div style="display:flex;gap:12px;padding:8px 12px;background:'+bg+';border-bottom:1px solid #e5e7eb;">'
+  function sec(label, items) {
+    var rows=items.filter(function(r){return r[1];}).map(function(r,i){
+      return '<div style="display:flex;gap:12px;padding:8px 12px;background:'+(i%2===0?'#F8FAFF':'#FFFFFF')+';border-bottom:1px solid #e5e7eb;">'
         +'<div style="width:180px;font-size:12px;font-weight:600;color:#64748b;flex-shrink:0;">'+r[0]+'</div>'
         +'<div style="font-size:13px;color:#1A1A2E;white-space:pre-wrap;">'+r[1]+'</div>'
         +'</div>';
     }).join('');
     if (!rows) return '';
-    return '<div style="margin-bottom:14px;">'
-      +'<div style="background:#1B4BA8;color:white;padding:6px 12px;font-weight:700;font-size:13px;border-radius:4px 4px 0 0;">'+label+'</div>'
-      +'<div style="border:1px solid #C5D3F0;border-top:none;border-radius:0 0 4px 4px;">'+rows+'</div>'
-      +'</div>';
+    return '<div style="margin-bottom:14px;"><div style="background:#1B4BA8;color:white;padding:6px 12px;font-weight:700;font-size:13px;border-radius:4px 4px 0 0;">'+label+'</div>'
+      +'<div style="border:1px solid #C5D3F0;border-top:none;border-radius:0 0 4px 4px;">'+rows+'</div></div>';
   }
-
-  var html = '';
-  html += section('Part A: ข้อมูลพนักงาน', [
-    ['รหัสพนักงาน', p.emp_id],
-    ['ชื่อ-สกุล', u.name?u.name.th:p.emp_id],
-    ['ตำแหน่งปัจจุบัน', p.current_position||''],
-    ['ตำแหน่งที่เสนอ', p.proposed_position||''],
-    ['เสนอโดย', proposer.name?proposer.name.th:p.proposed_by||''],
-    ['วันที่เสนอ', p.created_at?p.created_at.substring(0,10):''],
+  var html = sec('Part A: ข้อมูลพนักงาน',[
+    ['รหัสพนักงาน',p.emp_id],['ชื่อ-สกุล',u.name?u.name.th:p.emp_id],
+    ['ตำแหน่งปัจจุบัน',p.current_position||''],['ตำแหน่งที่เสนอ',p.proposed_position||''],
+    ['เสนอโดย',proposer.name?proposer.name.th:p.proposed_by||''],
+    ['วันที่เสนอ',p.created_at?p.created_at.substring(0,10):''],
   ]);
   if (p.proposal_type==='promotion') {
-    html += section('Part B: จุดแข็งและศักยภาพ', [['จุดแข็ง', p.key_strengths||'']]);
-    html += section('Part C: ผลงานโดดเด่น', [
-      ['ผลงานสำคัญ', p.achievement||''],
-      ['โครงการพิเศษ', p.special_project||''],
-    ]);
+    html += sec('Part B: จุดแข็งและศักยภาพ',[['จุดแข็ง',p.key_strengths||'']]);
+    html += sec('Part C: ผลงานโดดเด่น',[['ผลงานสำคัญ',p.achievement||''],['โครงการพิเศษ',p.special_project||'']]);
   }
-  html += section(p.proposal_type==='promotion'?'Part D: จุดที่ต้องพัฒนา':'Part B: รายละเอียด', [
-    ['จุดที่ต้องพัฒนา', p.to_be_developed||''],
-  ]);
-  html += section(p.proposal_type==='promotion'?'Part E: ความคาดหวัง':'Part C: เหตุผล', [
-    [p.proposal_type==='promotion'?'ความคาดหวัง':'เหตุผล', p.expectation||''],
-  ]);
+  html += sec(p.proposal_type==='promotion'?'Part D: จุดที่ต้องพัฒนา':'Part B: รายละเอียด',[['จุดที่ต้องพัฒนา',p.to_be_developed||'']]);
+  html += sec(p.proposal_type==='promotion'?'Part E: ความคาดหวัง':'Part C: เหตุผล',[[p.proposal_type==='promotion'?'ความคาดหวัง':'เหตุผล',p.expectation||'']]);
   body.innerHTML = html;
   document.getElementById('modal-proposal-detail').classList.remove('hidden');
 }
@@ -1676,7 +1656,10 @@ function printProposalDetail() {
   var body=document.getElementById('proposal-detail-body');
   var title=document.getElementById('proposal-detail-title');
   if (!body) return;
-  window.open('data:text/html,<h2>'+encodeURIComponent(title.textContent)+'</h2>'+encodeURIComponent(body.innerHTML));
+  var win=window.open('','_blank');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Proposal</title><style>body{font-family:TH Sarabun New,Arial;padding:20px;font-size:14px;}h2{color:#1B4BA8;}</style></head><body><h2>'+title.textContent+'</h2>'+body.innerHTML+'</body></html>');
+  win.document.close();
+  setTimeout(function(){win.print();},500);
 }
 
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
@@ -2030,7 +2013,7 @@ function renderEvalOthers(){
   const rows=subs.map(sid=>{
     const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
     const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
+    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button> <button class=\\\"btn btn-sm btn-outline\\\" style=\\\"font-size:11px;\\\" onclick=\\\"showEmpProposals(\\x27\"+(sid)+\"\\x27)\\\">View</button>":"")+"</td>\n    </tr>");
   });
   container.innerHTML=("<table><thead><tr><th>"+(t('th-code'))+"</th><th>"+(t('th-name'))+"</th><th>"+(t('th-dept'))+"</th><th>"+(t('th-pos'))+"</th><th>Level</th><th>Self</th><th></th></tr></thead><tbody>"+(rows.join(''))+"</tbody></table>");
 }
@@ -3951,7 +3934,6 @@ window.addEventListener('DOMContentLoaded',()=>{
     </div>
   </div>
 </div>
-
 <!-- PROPOSAL DETAIL MODAL -->
 <div class="modal-overlay hidden" id="modal-proposal-detail">
   <div class="modal" style="max-width:700px;max-height:90vh;overflow-y:auto;padding:0;">
