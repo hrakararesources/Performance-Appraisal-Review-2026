@@ -615,8 +615,7 @@ textarea{resize:vertical;min-height:70px;}
           </div>
         </div>
         <div class="emp-table-wrap">
-          <table><thead><tr><th>รหัส</th><th>ชื่อ</th><th>ฝ่าย</th><th>ตำแหน่ง</th><th>อายุงาน</th><th>Level</th><th>Self</th><th>S-Eval</th><th>Final</th><th>เกรด</th><th>Label</th><th>ปรับพิเศษ</th></tr></thead>
-          <tbody id="report-table"></tbody></table>
+          <div id="report-table-wrap"></div>
         </div>
       </div>
       <div class="card">
@@ -2059,15 +2058,90 @@ async function toggleEmpActive(id,activate){
 }
 // ── HR REPORT ──
 function renderHrReport(){
-  const empIds=Object.keys(USERS).filter(id=>!USERS[id].isHR);
-  document.getElementById('report-table').innerHTML=empIds.map(id=>{
-    const u=USERS[id];const e=evalStore[id]||{};const fg=e.finalTotal?getGrade(e.finalTotal):null;
-    return ("<tr><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td>"+(userName(u))+"</td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge badge-blue\">"+(u.level)+"</span></td><td>"+(e.selfTotal?e.selfTotal.toFixed(2):'—')+"</td><td>"+(e.sTotal?e.sTotal.toFixed(2):'—')+"</td><td>"+(e.finalTotal?e.finalTotal.toFixed(2):'—')+"</td><td>"+(fg?("<span class=\"badge\" style=\"background:"+(fg.bg)+";color:"+(fg.color)+";\">"+(fg.letter)+"</span>"):'—')+"</td><td>"+(fg?fg.label:'—')+"</td><td>"+(e.specialAdj?'★ '+( currentLang==='th'?'ใช่':'Yes'):'—')+"</td></tr>");
-  }).join('');
-  const gc={A:0,B:0,C:0,D:0,E:0};empIds.forEach(id=>{const e=evalStore[id]||{};if(e.finalTotal)gc[getGrade(e.finalTotal).letter]++;});
-  const mx=Math.max(...Object.values(gc),1);
-  document.getElementById('grade-dist').innerHTML=("<div style=\"display:flex;align-items:flex-end;gap:12px;height:120px;padding:0 1rem;\">"+(GRADES.map(g=>("<div style=\"flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;\"><div style=\"font-size:12px;color:var(--text-muted);\">"+(gc[g.letter])+"</div><div style=\"width:100%;background:"+(g.bar)+";border-radius:4px 4px 0 0;height:"+(gc[g.letter]/mx*90)+"px;min-height:2px;\"></div><div style=\"font-size:13px;font-weight:800;color:"+(g.color)+";\">"+(g.letter)+"</div></div>")).join(''))+"</div>");
+  var wrap = document.getElementById('report-table-wrap');
+  if (!wrap) return;
+
+  var gradeColors = {A:'#1e8449',B:'#1565c0',C:'#e67e22',D:'#e74c3c',E:'#c0392b'};
+  var levelOrder = Object.keys(EVAL_DATA);
+
+  // Group users by level
+  var levelGroups = {};
+  Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; }).forEach(function(id) {
+    var lk = USERS[id].level||'Unknown';
+    if (!levelGroups[lk]) levelGroups[lk] = [];
+    levelGroups[lk].push(id);
+  });
+
+  var html = '';
+
+  levelOrder.forEach(function(lk) {
+    var ids = levelGroups[lk];
+    if (!ids || ids.length===0) return;
+    var secs = (EVAL_DATA[lk]&&EVAL_DATA[lk].sections)||[];
+
+    // Section headers (vertical text via CSS writing-mode)
+    var secHeaders = secs.map(function(sec) {
+      return '<th style="padding:6px 4px;background:#F5B731;color:white;font-size:11px;font-weight:700;min-width:50px;max-width:60px;word-break:break-word;text-align:center;">'
+        +'<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;">'
+        +(sec.name[currentLang]||sec.name.th)+'<br/><span style="opacity:.8;">'+sec.pct+'%</span>'
+        +'</div></th>';
+    }).join('');
+
+    html += '<div style="margin-bottom:20px;">';
+    // Level header
+    html += '<div style="background:#374151;color:white;padding:8px 14px;font-weight:700;font-size:13px;border-radius:6px 6px 0 0;">'
+      + lk + ' <span style="font-weight:400;opacity:.7;font-size:12px;">(' + ids.length + ' คน)</span></div>';
+
+    // Table
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    html += '<thead><tr>'
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;white-space:nowrap;">รหัส</th>'
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;min-width:140px;">ชื่อ-สกุล</th>'
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;">ฝ่าย</th>'
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:left;">ตำแหน่ง</th>'
+      + secHeaders
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:center;white-space:nowrap;">Total</th>'
+      + '<th style="background:#1B4BA8;color:white;padding:8px;text-align:center;white-space:nowrap;">Grade</th>'
+      + '</tr></thead><tbody>';
+
+    ids.forEach(function(id, ri) {
+      var u = USERS[id];
+      var e = evalStore[id]||{};
+      var bg = ri%2===0?'#F8FAFF':'#FFFFFF';
+      var ft = e.finalTotal||null;
+      var gl = ft ? (ft>=4.21?'A':ft>=3.41?'B':ft>=2.61?'C':ft>=1.81?'D':'E') : null;
+      var gc = gl ? gradeColors[gl] : '#999';
+      var glabel = {A:'Role Model',B:'Proactive',C:'Reliable',D:'Developing',E:'Unsatisfactory'};
+      var fs = e.finalScores||{};
+
+      var secCells = secs.map(function(sec, si) {
+        var items = sec.items||[];
+        var sum=0, cnt=0;
+        items.forEach(function(item,ii) {
+          var k = si+'_'+ii;
+          if (fs[k]!==undefined){sum+=fs[k];cnt++;}
+        });
+        var avg = cnt>0?(sum/cnt).toFixed(2):null;
+        return '<td style="padding:6px 4px;text-align:center;background:'+bg+';border:1px solid #e5e7eb;color:'+(avg?'#1A1A2E':'#CCC')+';font-weight:'+(avg?'600':'400')+';">'+(avg||'—')+'</td>';
+      }).join('');
+
+      html += '<tr>'
+        + '<td style="padding:6px 8px;background:'+bg+';border:1px solid #e5e7eb;font-family:monospace;font-size:11px;">'+id+'</td>'
+        + '<td style="padding:6px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:'')+'</td>'
+        + '<td style="padding:6px 8px;background:'+bg+';border:1px solid #e5e7eb;">'+(u.dept?u.dept[currentLang]:'—')+'</td>'
+        + '<td style="padding:6px 8px;background:'+bg+';border:1px solid #e5e7eb;">'+(u.position?u.position[currentLang]:'—')+'</td>'
+        + secCells
+        + '<td style="padding:6px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;">'+(ft?ft.toFixed(2):'—')+'</td>'
+        + '<td style="padding:6px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;white-space:nowrap;">'+(gl?(gl+' '+glabel[gl]):'—')+'</td>'
+        + '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+  wrap.innerHTML = html;
 }
+
 function exportReportExcel() {
   if (typeof XLSX === 'undefined') {
     showToast('กำลังโหลด SheetJS...', '');
