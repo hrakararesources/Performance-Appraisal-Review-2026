@@ -146,7 +146,8 @@ table tr:hover td{background:var(--bg);}
 select,textarea{font-family:'Sarabun',sans-serif;font-size:14px;border:1.5px solid var(--border);border-radius:var(--radius);padding:8px 12px;background:var(--bg);color:var(--text);width:100%;}
 select:focus,textarea:focus{outline:none;border-color:var(--primary-light);background:white;}
 textarea{resize:vertical;min-height:70px;}
-.modal-overlay{position:fixed;inset:0;background:rgba(15,30,50,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay.hidden{display:none!important;}
+.modal-overlay{position:fixed!important;inset:0!important;background:rgba(15,30,50,.5);z-index:99999!important;display:flex;align-items:center;justify-content:center;padding:1rem;}
 .modal{background:white;border-radius:14px;padding:1.75rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
 .modal-title{font-size:17px;font-weight:700;color:var(--primary);}
