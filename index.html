@@ -225,6 +225,7 @@ textarea{resize:vertical;min-height:70px;}
 .chip-dup{background:#ede7f6;color:#5e35b1;}
 </style>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="toast-container" id="toast-container"></div>
@@ -608,7 +609,10 @@ textarea{resize:vertical;min-height:70px;}
       <div class="card">
         <div class="card-header">
           <div class="card-title" id="t-report-title">รายงานผลการประเมิน</div>
-          <button class="btn btn-sm btn-accent" onclick="exportReport()">⬇ Export CSV</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm btn-outline" onclick="exportReport()">⬇ Export CSV</button>
+            <button class="btn btn-sm btn-accent" onclick="exportReportExcel()">⬇ Export Excel</button>
+          </div>
         </div>
         <div class="emp-table-wrap">
           <table><thead><tr><th>รหัส</th><th>ชื่อ</th><th>ฝ่าย</th><th>ตำแหน่ง</th><th>อายุงาน</th><th>Level</th><th>Self</th><th>S-Eval</th><th>Final</th><th>เกรด</th><th>Label</th><th>ปรับพิเศษ</th></tr></thead>
@@ -2064,6 +2068,116 @@ function renderHrReport(){
   const mx=Math.max(...Object.values(gc),1);
   document.getElementById('grade-dist').innerHTML=("<div style=\"display:flex;align-items:flex-end;gap:12px;height:120px;padding:0 1rem;\">"+(GRADES.map(g=>("<div style=\"flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;\"><div style=\"font-size:12px;color:var(--text-muted);\">"+(gc[g.letter])+"</div><div style=\"width:100%;background:"+(g.bar)+";border-radius:4px 4px 0 0;height:"+(gc[g.letter]/mx*90)+"px;min-height:2px;\"></div><div style=\"font-size:13px;font-weight:800;color:"+(g.color)+";\">"+(g.letter)+"</div></div>")).join(''))+"</div>");
 }
+function exportReportExcel() {
+  // Use SheetJS to create Excel with grouped by Level layout
+  var allUsers = Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; });
+
+  // Group by Level
+  var levelGroups = {};
+  allUsers.forEach(function(id) {
+    var u = USERS[id];
+    var lk = u.level || 'Unknown';
+    if (!levelGroups[lk]) levelGroups[lk] = [];
+    levelGroups[lk].push(id);
+  });
+
+  var wb = XLSX.utils.book_new();
+  var wsData = [];
+
+  // Title row
+  wsData.push(['Performance Appraisal Review 2026', '', '', '', '', '', '', '', '', '']);
+  wsData.push(['Akara Resources', '', '', '', '', '', '', '', '', '']);
+  wsData.push([]);
+
+  // Header row (vertical text simulated with rotation via cell style)
+  wsData.push(['Emp. ID', 'Name - Surname', 'Department', 'Position', 'Level',
+    'Self Score', 'S-Level Score', 'Final Score', 'Grade', 'Label']);
+
+  // Group by Level
+  var levelOrder = Object.keys(EVAL_DATA);
+  levelOrder.forEach(function(lk) {
+    var ids = levelGroups[lk];
+    if (!ids || ids.length === 0) return;
+
+    // Level group header
+    wsData.push([lk, '', '', '', '', '', '', '', '', '']);
+
+    ids.forEach(function(id) {
+      var u = USERS[id];
+      var e = evalStore[id] || {};
+      var score = e.finalTotal || null;
+      var grade = score ? getGrade(score) : null;
+      wsData.push([
+        id,
+        u.name ? u.name.th : '',
+        u.dept ? u.dept.th : '',
+        u.position ? u.position.th : '',
+        u.level || '',
+        e.selfTotal ? e.selfTotal.toFixed(2) : '—',
+        e.sTotal ? e.sTotal.toFixed(2) : '—',
+        e.finalTotal ? e.finalTotal.toFixed(2) : '—',
+        grade ? grade.letter : '—',
+        grade ? grade.label : '—',
+      ]);
+    });
+    wsData.push([]); // blank row between groups
+  });
+
+  var ws = XLSX.utils.aoa_to_sheet(wsData);
+
+  // Column widths
+  ws['!cols'] = [
+    {wch:14}, {wch:22}, {wch:18}, {wch:24}, {wch:16},
+    {wch:10}, {wch:12}, {wch:11}, {wch:8}, {wch:14}
+  ];
+
+  // Style header row (row 4, index 3)
+  var headerStyle = {
+    font: {bold:true, color:{rgb:'FFFFFF'}},
+    fill: {fgColor:{rgb:'1B4BA8'}},
+    alignment: {horizontal:'center', vertical:'center', wrapText:true}
+  };
+
+  ['A4','B4','C4','D4','E4','F4','G4','H4','I4','J4'].forEach(function(cell) {
+    if (ws[cell]) {
+      ws[cell].s = headerStyle;
+    }
+  });
+
+  // Style title rows
+  ['A1','A2'].forEach(function(cell) {
+    if (ws[cell]) ws[cell].s = {font:{bold:true, sz:14, color:{rgb:'1B4BA8'}}};
+  });
+
+  // Merge title cells
+  ws['!merges'] = [
+    {s:{r:0,c:0}, e:{r:0,c:9}},
+    {s:{r:1,c:0}, e:{r:1,c:9}},
+  ];
+
+  // Style level group rows
+  var rowIdx = 4;
+  Object.keys(EVAL_DATA).forEach(function(lk) {
+    var ids = levelGroups[lk];
+    if (!ids || ids.length === 0) return;
+    rowIdx++; // group header
+    var cellRef = 'A' + rowIdx;
+    if (ws[cellRef]) {
+      ws[cellRef].s = {
+        font: {bold:true, color:{rgb:'FFFFFF'}},
+        fill: {fgColor:{rgb:'374151'}},
+      };
+    }
+    // Merge group header across all columns
+    ws['!merges'].push({s:{r:rowIdx-1,c:0}, e:{r:rowIdx-1,c:9}});
+    rowIdx += ids.length + 1; // employees + blank
+  });
+
+  XLSX.utils.book_append_sheet(wb, ws, 'Performance Report');
+  XLSX.writeFile(wb, 'PerformanceAppraisal_2026_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  showToast('Export Excel สำเร็จ', 'success');
+}
+
 function exportReport(){
   const empIds=Object.keys(USERS).filter(id=>!USERS[id].isHR);
   let csv=(""+(t('th-code'))+",Name/ชื่อ,"+(t('th-dept'))+","+(t('th-pos'))+",อายุงาน,Level,Self,S-Eval,Final,"+(t('th-grade'))+",Label,Special\\n");
