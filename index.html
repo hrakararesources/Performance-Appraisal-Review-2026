@@ -1624,16 +1624,19 @@ function renderGradeDistChart() {
       var label = isth2 ? g.labelTh : g.labelEn;
       var desc = isth2 ? g.descTh : g.descEn;
       var letter = ['A','B','C','D','E'][i];
-      var rangeSuffix = isth2 ? ' คะแนน' : ' Point';
-      return '<div style="display:flex;align-items:flex-start;gap:8px;margin-bottom:10px;">'
-        + '<div style="width:24px;height:24px;border-radius:50%;background:'+g.color+'22;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px;">'
-        + '<span style="font-size:11px;font-weight:700;color:'+g.color+';">'+letter+'</span></div>'
-        + '<div style="flex:1;">'
-        + '<div style="display:flex;justify-content:space-between;align-items:baseline;">'
-        + '<span style="font-size:12px;font-weight:700;color:'+g.color+';">'+label+'</span>'
-        + '<span style="font-size:10px;color:'+g.color+';margin-left:6px;white-space:nowrap;font-weight:600;">'+g.range+rangeSuffix+'</span>'
+      var rangeSuffix = isth2 ? ' คะแนน' : ' pts';
+      return '<div style="display:flex;gap:0;margin-bottom:8px;border-radius:10px;overflow:hidden;border:1px solid '+g.color+'33;">'
+        + '<div style="width:4px;background:'+g.color+';flex-shrink:0;"></div>'
+        + '<div style="flex:1;padding:8px 10px;background:'+g.color+'0d;">'
+        + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;">'
+        + '<div style="display:flex;align-items:center;gap:7px;">'
+        + '<div style="width:20px;height:20px;border-radius:50%;background:'+g.color+';display:flex;align-items:center;justify-content:center;flex-shrink:0;">'
+        + '<span style="font-size:10px;font-weight:800;color:white;">'+letter+'</span></div>'
+        + '<span style="font-size:13px;font-weight:700;color:'+g.color+';">'+label+'</span>'
         + '</div>'
-        + '<div style="font-size:11px;color:var(--text-muted);margin-top:2px;line-height:1.4;">'+desc+'</div>'
+        + '<span style="font-size:10px;font-weight:700;color:'+g.color+';background:'+g.color+'22;padding:2px 7px;border-radius:20px;white-space:nowrap;">'+g.range+rangeSuffix+'</span>'
+        + '</div>'
+        + '<div style="font-size:11px;color:#555;line-height:1.45;">'+desc+'</div>'
         + '</div></div>';
     }).join('');
   }
