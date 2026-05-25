@@ -1740,29 +1740,69 @@ function printProposalDetail() {
     +field('Level', u.level||'—')
     +'</div></div>';
 
-  if (p.proposal_type==='promotion') {
-    html += section('Part B','จุดแข็งและศักยภาพ','Key Strengths', p.key_strengths||'—');
-    html += section('Part C','ผลงานโดดเด่น','Key Achievements',
-      (p.achievement||'—') + (p.special_project?'<br><br><em>โครงการพิเศษ:</em> '+p.special_project:''));
-    html += section('Part D','จุดที่ต้องพัฒนา','Areas for Development', p.to_be_developed||'—');
-    html += section('Part E','ความคาดหวัง','Expectations', p.expectation||'—');
-  } else {
-    html += section('Part B','รายละเอียด','Details', p.to_be_developed||'—');
-    html += section('Part C','เหตุผล','Reason', p.expectation||'—');
+  // Part B - Proposal type selection
+  var isPromotion = p.proposal_type === 'promotion';
+  html += '<div style="margin-bottom:18px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
+    +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">Part B</span>'
+    +'<span style="font-size:13px;font-weight:500;">Proposal & Performance Appraisal Background</span>'
+    +'</div>'
+    +'<div style="background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:12px 16px;">'
+    +'<p style="font-size:12px;margin:0 0 10px;display:flex;align-items:center;gap:8px;">'
+    +'<span style="display:inline-block;width:14px;height:14px;border:1px solid #1A1A2E;border-radius:2px;text-align:center;line-height:12px;font-size:11px;">'+(isPromotion?'':'&#10003;')+'</span>'
+    +' Special Adjustment <em style="color:#666;font-size:11px;">(Please provide information for only PART D.)</em></p>'
+    +'<p style="font-size:12px;margin:0;display:flex;align-items:center;gap:8px;">'
+    +'<span style="display:inline-block;width:14px;height:14px;border:1px solid #1A1A2E;border-radius:2px;text-align:center;line-height:12px;font-size:11px;">'+(isPromotion?'&#10003;':'')+'</span>'
+    +' Promotion <em style="color:#666;font-size:11px;">(Please provide information for all sections until PART E.)</em></p>'
+    +'</div></div>';
+
+  // Part C - Key Strengths
+  html += section('Part C',
+    'จุดแข็งและจุดที่ต้องพัฒนา',
+    'Key strengths of employee and areas to be developed',
+    (p.key_strengths||'—') + (p.to_be_developed?'<br><br><strong style="font-size:12px;color:#444;">Areas to be developed:</strong><br>'+p.to_be_developed:''));
+
+  // Part D - Achievement
+  html += '<div style="margin-bottom:18px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
+    +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">Part D</span>'
+    +'<span style="font-size:13px;font-weight:500;">This year&#39;s achievement or outstanding performance</span>'
+    +'</div>'
+    +'<p style="font-size:11px;color:#666;margin:0 0 8px;font-style:italic;">Please describe or attach the relevant document for the benefit of the consideration process.</p>'
+    +'<div style="background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:12px;min-height:60px;font-size:13px;line-height:1.7;color:#1A1A2E;">'
+    +(p.achievement||'—')+(p.special_project?'<br><br><em>Special Project: </em>'+p.special_project:'')
+    +'</div></div>';
+
+  // Part E - only for promotion
+  if (isPromotion) {
+    html += section('Part E','ความคาดหวังหลังเลื่อนตำแหน่ง','Expectation After Promotion', p.expectation||'—');
   }
 
-  // Signatures
-  html += '<div style="margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:40px;border-top:1px solid #1A1A2E;padding-top:20px;">'
-    +'<div><p style="font-size:11px;color:#666;margin-bottom:30px;">ลงชื่อผู้เสนอ / Proposed by</p>'
+  // Signatures - 3 boxes
+  html += '<div style="margin-top:30px;border-top:1px solid #1A1A2E;padding-top:20px;">'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">'
+    // Proposed by
+    +'<div><p style="font-size:11px;color:#666;margin-bottom:32px;">Proposed by / ผู้เสนอ</p>'
     +'<div style="border-top:0.5px solid #1A1A2E;padding-top:6px;">'
-    +'<p style="font-size:13px;font-weight:500;">'+( proposer.name?proposer.name.th:p.proposed_by||'')+'</p>'
+    +'<p style="font-size:13px;font-weight:500;min-height:18px;">'+(proposer.name?proposer.name.th:p.proposed_by||'')+'</p>'
     +'<p style="font-size:11px;color:#666;margin-top:2px;">'+(proposer.position?proposer.position.th:'')+'</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:4px;">Date: ....................</p>'
     +'</div></div>'
-    +'<div><p style="font-size:11px;color:#666;margin-bottom:30px;">ลงชื่ออนุมัติ / Approved by</p>'
+    // HOD
+    +'<div><p style="font-size:11px;color:#666;margin-bottom:32px;">HOD / หัวหน้าฝ่าย</p>'
     +'<div style="border-top:0.5px solid #1A1A2E;padding-top:6px;">'
-    +'<p style="font-size:13px;color:#999;">................................................</p>'
-    +'<p style="font-size:11px;color:#666;margin-top:4px;">วันที่ / Date: ................................</p>'
-    +'</div></div></div>'
+    +'<p style="font-size:13px;color:#bbb;min-height:18px;">................................................</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:2px;">&nbsp;</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:4px;">Date: ....................</p>'
+    +'</div></div>'
+    // GM
+    +'<div><p style="font-size:11px;color:#666;margin-bottom:32px;">GM / ผู้จัดการทั่วไป</p>'
+    +'<div style="border-top:0.5px solid #1A1A2E;padding-top:6px;">'
+    +'<p style="font-size:13px;color:#bbb;min-height:18px;">................................................</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:2px;">&nbsp;</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:4px;">Date: ....................</p>'
+    +'</div></div>'
+    +'</div></div>'
     +'</body></html>';
 
   var win=window.open('','_blank');
