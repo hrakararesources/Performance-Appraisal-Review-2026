@@ -1692,8 +1692,8 @@ function printProposalDetail() {
   function field(label, value) {
     return '<div style="margin-bottom:6px;"><span style="font-size:11px;color:#666;">'+label+'</span><p style="margin:2px 0 0;font-size:14px;font-weight:500;color:#111;border-bottom:0.5px solid #ddd;padding-bottom:4px;">'+value+'</p></div>';
   }
-  function section(partNum, labelTh, labelEn, content) {
-    return '<div style="margin-bottom:18px;">'
+  function section(partNum, labelTh, labelEn, content, pageBreak) {
+    return '<div style="margin-bottom:18px;'+(pageBreak?'page-break-before:always;padding-top:10px;':'')+'">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
       +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">'+partNum+'</span>'
       +'<span style="font-size:13px;font-weight:500;">'+labelTh+' / '+labelEn+'</span>'
@@ -1734,7 +1734,7 @@ function printProposalDetail() {
     +field('ชื่อ-สกุล / Full Name', u.name?u.name.th:p.emp_id)
     +field('ฝ่าย/แผนก / Department', u.dept?u.dept.th:'—')
     +field('ตำแหน่งปัจจุบัน / Current Position', p.current_position||'—')
-    +field('วันที่เริ่มงาน / Start Date', u.startDate?u.startDate:'—')
+    +field('วันที่เริ่มงาน / Start Date', u.startDate?u.startDate.substring(0,10):'—')
     +field('อายุงาน / Tenure', u.startDate?tenureLabel(u.startDate):'—')
     +field('ตำแหน่งที่เสนอ / Proposed Position', p.proposed_position||'—')
     +field('Level', u.level||'—')
@@ -1756,30 +1756,49 @@ function printProposalDetail() {
     +' Promotion <em style="color:#666;font-size:11px;">(Please provide information for all sections until PART E.)</em></p>'
     +'</div></div>';
 
-  // Part C - Key Strengths
-  html += section('Part C',
-    'จุดแข็งและจุดที่ต้องพัฒนา',
-    'Key strengths of employee and areas to be developed',
-    (p.key_strengths||'—') + (p.to_be_developed?'<br><br><strong style="font-size:12px;color:#444;">Areas to be developed:</strong><br>'+p.to_be_developed:''));
-
-  // Part D - Achievement
+  // Part C - split Key Strengths and Areas to be developed clearly
   html += '<div style="margin-bottom:18px;">'
     +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
+    +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">Part C</span>'
+    +'<span style="font-size:13px;font-weight:500;">Key strengths of employee and areas to be developed</span>'
+    +'</div>'
+    +'<table style="width:100%;border-collapse:collapse;">'
+    +'<thead><tr>'
+    +'<th style="width:50%;background:#1A1A2E;color:white;font-size:12px;font-weight:500;padding:7px 12px;text-align:left;border-right:1px solid white;">Key Strengths / จุดแข็ง</th>'
+    +'<th style="width:50%;background:#1A1A2E;color:white;font-size:12px;font-weight:500;padding:7px 12px;text-align:left;">Areas to be Developed / จุดที่ต้องพัฒนา</th>'
+    +'</tr></thead>'
+    +'<tbody><tr>'
+    +'<td style="background:#f9f9f9;border:0.5px solid #ccc;padding:10px 12px;font-size:13px;line-height:1.7;color:#1A1A2E;vertical-align:top;min-height:60px;">'+(p.key_strengths||'—')+'</td>'
+    +'<td style="background:#f9f9f9;border:0.5px solid #ccc;border-left:none;padding:10px 12px;font-size:13px;line-height:1.7;color:#1A1A2E;vertical-align:top;min-height:60px;">'+(p.to_be_developed||'—')+'</td>'
+    +'</tr></tbody></table></div>';
+
+  // Part D - Achievement (split into 2 rows if special project exists)
+  var partDContent = p.achievement||'—';
+  html += '<div style="margin-bottom:18px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
     +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">Part D</span>'
     +'<span style="font-size:13px;font-weight:500;">This year&#39;s achievement or outstanding performance</span>'
     +'</div>'
-    +'<p style="font-size:11px;color:#666;margin:0 0 8px;font-style:italic;">Please describe or attach the relevant document for the benefit of the consideration process.</p>'
-    +'<div style="background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:12px;min-height:60px;font-size:13px;line-height:1.7;color:#1A1A2E;">'
-    +(p.achievement||'—')+(p.special_project?'<br><br><em>Special Project: </em>'+p.special_project:'')
-    +'</div></div>';
+    +(p.special_project
+      ? '<table style="width:100%;border-collapse:collapse;">'
+        +'<thead><tr>'
+        +'<th style="width:50%;background:#1A1A2E;color:white;font-size:12px;font-weight:500;padding:7px 12px;text-align:left;border-right:1px solid white;">Achievement / ผลงาน</th>'
+        +'<th style="width:50%;background:#1A1A2E;color:white;font-size:12px;font-weight:500;padding:7px 12px;text-align:left;">Special Project / โครงการพิเศษ</th>'
+        +'</tr></thead><tbody><tr>'
+        +'<td style="background:#f9f9f9;border:0.5px solid #ccc;padding:10px 12px;font-size:13px;line-height:1.7;color:#1A1A2E;vertical-align:top;">'+partDContent+'</td>'
+        +'<td style="background:#f9f9f9;border:0.5px solid #ccc;border-left:none;padding:10px 12px;font-size:13px;line-height:1.7;color:#1A1A2E;vertical-align:top;">'+p.special_project+'</td>'
+        +'</tr></tbody></table>'
+      : '<div style="background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:12px;min-height:60px;font-size:13px;line-height:1.7;color:#1A1A2E;">'+partDContent+'</div>'
+    )
+    +'</div>';
 
   // Part E - only for promotion
   if (isPromotion) {
-    html += section('Part E','ความคาดหวังหลังเลื่อนตำแหน่ง','Expectation After Promotion', p.expectation||'—');
+    html += section('Part E','ความคาดหวังหลังเลื่อนตำแหน่ง','Expectation After Promotion', p.expectation||'—', true);
   }
 
   // Signatures - 3 boxes
-  html += '<div style="margin-top:30px;border-top:1px solid #1A1A2E;padding-top:20px;">'
+  html += '<div style="margin-top:30px;border-top:1px solid #1A1A2E;padding-top:20px;'+(isPromotion?'':'page-break-before:always;')+'">'
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:24px;">'
     // Proposed by
     +'<div><p style="font-size:11px;color:#666;margin-bottom:32px;">Proposed by / ผู้เสนอ</p>'
