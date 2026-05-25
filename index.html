@@ -2484,6 +2484,80 @@ function submitSubEval(){
   showPage('page-eval-others');
 }
 
+
+// ── RESET EVAL ───────────────────────────────────────────────
+function showResetMenu(empId) {
+  var u = USERS[empId];
+  if (!u) return;
+  var name = u.name ? u.name[currentLang]||u.name.th : empId;
+  var msg = currentLang==='th'
+    ? 'รีเซ็ตข้อมูลการประเมินของ ' + name + '\nเลือกประเภทที่ต้องการรีเซ็ต:'
+    : 'Reset evaluation data for ' + name + '\nSelect type to reset:';
+
+  var types = [
+    {label: currentLang==='th'?'Self Evaluation':'Self Evaluation', key:'self'},
+    {label: currentLang==='th'?'S-Level Evaluation':'S-Level Evaluation', key:'slevel'},
+    {label: currentLang==='th'?'Final Evaluation':'Final Evaluation', key:'final'},
+    {label: currentLang==='th'?'ทั้งหมด / All':'All', key:'all'},
+  ];
+
+  // Simple prompt-based selection
+  var choice = prompt(msg + '\n\n1 = Self\n2 = S-Level\n3 = Final\n4 = ทั้งหมด / All\n\nพิมพ์ 1-4:');
+  if (!choice) return;
+  var keyMap = {'1':'self','2':'slevel','3':'final','4':'all'};
+  var key = keyMap[choice.trim()];
+  if (!key) { showToast('ตัวเลือกไม่ถูกต้อง',''); return; }
+
+  var confirmMsg = currentLang==='th'
+    ? 'ยืนยันการรีเซ็ต ' + (key==='all'?'ทั้งหมด':key) + ' ของ ' + name + '?'
+    : 'Confirm reset ' + key + ' for ' + name + '?';
+  if (!confirm(confirmMsg)) return;
+
+  doResetEval(empId, key);
+}
+
+function doResetEval(empId, type) {
+  if (!evalStore[empId]) evalStore[empId] = {};
+  var e = evalStore[empId];
+
+  if (type === 'self' || type === 'all') {
+    delete e.selfTotal;
+    delete e.selfScores;
+  }
+  if (type === 'slevel' || type === 'all') {
+    delete e.sTotal;
+    delete e.sScores;
+    delete e.sComment;
+  }
+  if (type === 'final' || type === 'all') {
+    delete e.finalTotal;
+    delete e.finalScores;
+    delete e.finalComment;
+    delete e.specialAdj;
+    delete e.specialReason;
+  }
+
+  // Save to Sheets
+  gasRun('saveEval', {
+    emp_id: empId,
+    self_total:  e.selfTotal  || '',
+    s_total:     e.sTotal     || '',
+    final_total: e.finalTotal || '',
+    special_adj: e.specialAdj || false,
+    special_reason: e.specialReason || '',
+    s_comment:   e.sComment   || '',
+    final_comment: e.finalComment || '',
+    self_scores:  e.selfScores  || null,
+    s_scores:     e.sScores     || null,
+    final_scores: e.finalScores || null,
+  }).then(function(r) {
+    showToast(currentLang==='th'?'รีเซ็ตเรียบร้อย':'Reset successful', 'success');
+    renderHrEmployees();
+  }).catch(function(e) {
+    showToast('รีเซ็ตล้มเหลว: ' + e.message, '');
+  });
+}
+
 // ── INBOX ──
 function renderInbox(){
   const msgs=inbox[currentUser.id]||[];const container=document.getElementById('inbox-list');
