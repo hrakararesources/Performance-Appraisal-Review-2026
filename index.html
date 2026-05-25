@@ -1568,13 +1568,13 @@ function renderHrSummaryCard() {
     + '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">'
     + '<div style="text-align:center;background:var(--bg);border-radius:8px;padding:12px;">'
     + '<div style="font-size:24px;font-weight:700;color:var(--primary);">' + counts.self + '/' + total + '</div>'
-    + '<div style="font-size:12px;color:var(--text-muted);">Self Eval</div></div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">Self Evaluation</div></div>'
     + '<div style="text-align:center;background:var(--bg);border-radius:8px;padding:12px;">'
     + '<div style="font-size:24px;font-weight:700;color:#5e35b1;">' + counts.s + '/' + total + '</div>'
-    + '<div style="font-size:12px;color:var(--text-muted);">S-Level</div></div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">S-Level Evaluation</div></div>'
     + '<div style="text-align:center;background:var(--bg);border-radius:8px;padding:12px;">'
     + '<div style="font-size:24px;font-weight:700;color:#1e8449;">' + counts.final + '/' + total + '</div>'
-    + '<div style="font-size:12px;color:var(--text-muted);">Final</div></div>'
+    + '<div style="font-size:12px;color:var(--text-muted);">Final Evaluation</div></div>'
     + '</div>'
     + '<div style="margin-top:10px;text-align:right;">'
     + '<button onclick="showPage(\'page-hr-dashboard\');renderHrDashboard();" class="btn btn-sm btn-outline">'
@@ -1596,7 +1596,7 @@ function showEmpProposals(empId) {
   if (title) title.textContent = (currentLang==='th'?'ข้อเสนอของ ':'Proposals for ')+(u.name?u.name[currentLang]||u.name.th:empId);
   body.innerHTML = list.map(function(p){
     var date = p.created_at?p.created_at.substring(0,10):'';
-    var tl = p.proposal_type==='promotion'?'เลื่อนตำแหน่ง':'ปรับพิเศษ';
+    var tl = p.proposal_type==='promotion'?'เลื่อนตำแหน่ง / Promotion':'ปรับพิเศษ / Special Adj.';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#F8FAFF;">'
       +'<div><div style="font-weight:600;">'+tl+'</div><div style="font-size:12px;color:#64748b;">'+date+'</div></div>'
       +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">รายละเอียด</button>'
@@ -1623,8 +1623,8 @@ function renderProposalList() {
   var cnt = document.getElementById('proposal-count');
   if (cnt) cnt.textContent = list.length + (currentLang==='th'?' รายการ':' proposals');
   if (!list.length) { wrap.innerHTML='<p style="color:var(--text-muted);padding:2rem;text-align:center;">ยังไม่มีข้อเสนอ</p>'; return; }
-  var typeColors={promotion:'1565c0',special:'e67e22'};
-  var typeLabels={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
+  var typeColors={promotion:'1565c0',special:'1e8449'};
+  var typeLabels={promotion:'เลื่อนตำแหน่ง / Promotion',special:'ปรับพิเศษ / Special Adj.'};
   wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">วันที่</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">พนักงาน</th>'
