@@ -335,6 +335,10 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-th="เสนอพิจารณา" data-en="Recommendations">เสนอพิจารณา</span>
       </div>
+      <div class="nav-item" id="nav-report-final" style="display:none;" onclick="showPage('page-final-report');renderFinalReport();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+        <span data-th="รายงาน" data-en="Report">รายงาน</span>
+      </div>
     </div>
 
     <div class="nav-group" id="nav-hr" style="display:none">
@@ -554,6 +558,17 @@ textarea{resize:vertical;min-height:70px;}
           <span id="proposal-count" style="font-size:12px;color:var(--text-muted);margin-left:auto;"></span>
         </div>
         <div id="proposal-list-wrap"></div>
+      </div>
+    </div>
+
+    <!-- FINAL REPORT -->
+    <div class="page" id="page-final-report">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title" data-th="รายงานผลการประเมิน (สังกัดของฉัน)" data-en="Evaluation Report (My Team)">รายงานผลการประเมิน (สังกัดของฉัน)</div>
+          <button class="btn btn-sm btn-accent" onclick="exportFinalReport()">⬇ Export Excel</button>
+        </div>
+        <div id="final-report-wrap"></div>
       </div>
     </div>
 
@@ -1453,6 +1468,8 @@ function setupSidebar(){
   document.getElementById('nav-hr').style.display=u.isHR?'':'none';
   var navPF=document.getElementById('nav-proposals-final');
   if(navPF) navPF.style.display=(u.isFinal&&!u.isHR)?'':'none';
+  var navRF=document.getElementById('nav-report-final');
+  if(navRF) navRF.style.display=(u.isFinal&&!u.isHR)?'':'none';
   const subs=SUBORDINATES[u.id]||[];
   const navOthers=document.getElementById('nav-eval-others');
   if(navOthers){navOthers.style.display=subs.length>0?'':'none';
@@ -1810,6 +1827,200 @@ function printProposalDetail() {
   win.document.write(html);
   win.document.close();
   setTimeout(function(){win.print();},600);
+}
+
+
+// ── FINAL REPORT (for Final Approvers) ───────────────────────
+function renderFinalReport() {
+  var wrap = document.getElementById('final-report-wrap');
+  if (!wrap) return;
+
+  // Get subordinates of current Final approver
+  var myId = currentUser.id;
+  var mySubs = Object.keys(USERS).filter(function(id) {
+    return USERS[id].finalId === myId && !USERS[id].inactive;
+  });
+
+  if (mySubs.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--text-muted);padding:2rem;text-align:center;">ไม่มีพนักงานในสังกัด</p>';
+    return;
+  }
+
+  // Group by level
+  var levelGroups = {};
+  mySubs.forEach(function(id) {
+    var lk = USERS[id].level || 'Unknown';
+    if (!levelGroups[lk]) levelGroups[lk] = [];
+    levelGroups[lk].push(id);
+  });
+
+  var html = '';
+  Object.keys(EVAL_DATA).forEach(function(lk) {
+    var ids = levelGroups[lk];
+    if (!ids || ids.length === 0) return;
+    var secs = (EVAL_DATA[lk] && EVAL_DATA[lk].sections) || [];
+
+    var secHeaders = secs.map(function(sec) {
+      return '<th style="background:#FFF8E7;color:#7B5200;font-size:10px;font-weight:700;min-width:50px;max-width:60px;text-align:center;border:1px solid #F5B731;padding:4px;">'
+        + '<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;">'
+        + (sec.name[currentLang]||sec.name.th) + '<br/><span style="opacity:.8;">' + sec.pct + '%</span>'
+        + '</div></th>';
+    }).join('');
+
+    var isth = currentLang === 'th';
+    html += '<div style="margin-bottom:20px;">';
+    html += '<div style="background:#374151;color:white;padding:8px 14px;font-weight:700;font-size:13px;border-radius:6px 6px 0 0;">'
+      + lk + ' <span style="font-weight:400;opacity:.7;font-size:12px;">(' + ids.length + (isth ? ' คน' : ' employees') + ')</span></div>';
+    html += '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    html += '<thead><tr>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;">' + (isth?'รหัส':'Emp. ID') + '</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;min-width:130px;border:1px solid #C5D3F0;">' + (isth?'ชื่อ-สกุล':'Name') + '</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:left;border:1px solid #C5D3F0;">' + (isth?'ตำแหน่ง':'Position') + '</th>'
+      + secHeaders
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;border:1px solid #C5D3F0;">Total</th>'
+      + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;border:1px solid #C5D3F0;">Grade</th>'
+      + '</tr></thead><tbody>';
+
+    ids.forEach(function(id, ri) {
+      var u = USERS[id];
+      var e = evalStore[id] || {};
+      var bg = ri%2===0?'#F8FAFF':'#FFFFFF';
+      var ft = e.finalTotal || null;
+      var gl = ft ? (ft>=4.21?'A':ft>=3.41?'B':ft>=2.61?'C':ft>=1.81?'D':'E') : null;
+      var gc = {A:'#1e8449',B:'#1565c0',C:'#e67e22',D:'#e74c3c',E:'#c0392b'}[gl] || '#999';
+      var fs = e.finalScores || {};
+
+      var secCells = secs.map(function(sec, si) {
+        var items = sec.items || [];
+        var sum=0, cnt=0;
+        items.forEach(function(item, ii) {
+          var v = (fs[si]&&fs[si][ii]!==undefined)?fs[si][ii]:(fs[si+'_'+ii]!==undefined)?fs[si+'_'+ii]:undefined;
+          if (v!==undefined){sum+=v;cnt++;}
+        });
+        var avg = cnt>0?(sum/cnt).toFixed(2):null;
+        return '<td style="padding:6px 4px;text-align:center;background:'+bg+';border:1px solid #e5e7eb;color:'+(avg?'#1A1A2E':'#CCC')+';font-weight:'+(avg?'600':'400')+';">'+(avg||'—')+'</td>';
+      }).join('');
+
+      html += '<tr>'
+        + '<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-family:monospace;font-size:11px;">'+id+'</td>'
+        + '<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:'')+'</td>'
+        + '<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;">'+(u.position?u.position[currentLang]:'')+'</td>'
+        + secCells
+        + '<td style="padding:7px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;">'+(ft?ft.toFixed(2):'—')+'</td>'
+        + '<td style="padding:7px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;white-space:nowrap;">'+(gl?gl:'—')+'</td>'
+        + '</tr>';
+    });
+
+    html += '</tbody></table></div></div>';
+  });
+
+  wrap.innerHTML = html;
+}
+
+function exportFinalReport() {
+  if (typeof XLSX === 'undefined') {
+    showToast('กำลังโหลด SheetJS...', '');
+    setTimeout(exportFinalReport, 1500);
+    return;
+  }
+
+  var myId = currentUser.id;
+  var mySubs = Object.keys(USERS).filter(function(id) {
+    return USERS[id].finalId === myId && !USERS[id].inactive;
+  });
+
+  var gradeColors = {A:'1e8449',B:'1565c0',C:'e67e22',D:'e74c3c',E:'c0392b'};
+  var gradeLabels = {A:'Role Model',B:'Proactive',C:'Reliable',D:'Developing',E:'Unsatisfactory'};
+  function getGL(s) {
+    if (!s) return null;
+    if (s>=4.21) return 'A'; if (s>=3.41) return 'B';
+    if (s>=2.61) return 'C'; if (s>=1.81) return 'D'; return 'E';
+  }
+  function cs(fg, fc, bold, rot, wrap, ha) {
+    return {
+      font:{bold:!!bold,color:{rgb:fc||'1A1A2E'},name:'Arial',sz:10},
+      fill:fg?{patternType:'solid',fgColor:{rgb:fg}}:{},
+      alignment:{horizontal:ha||'center',vertical:'center',textRotation:rot||0,wrapText:!!wrap},
+      border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},
+              left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
+    };
+  }
+  function setCell(ws, r, c, val, style) {
+    var ref = XLSX.utils.encode_cell({r:r,c:c});
+    ws[ref] = {v:val,t:typeof val==='number'?'n':'s',s:style};
+  }
+
+  var wb = {SheetNames:[], Sheets:{}};
+  var levelGroups = {};
+  mySubs.forEach(function(id) {
+    var lk = USERS[id].level||'Unknown';
+    if (!levelGroups[lk]) levelGroups[lk] = [];
+    levelGroups[lk].push(id);
+  });
+
+  Object.keys(EVAL_DATA).forEach(function(lk) {
+    var ids = levelGroups[lk];
+    if (!ids || ids.length===0) return;
+    var secs = (EVAL_DATA[lk]&&EVAL_DATA[lk].sections)||[];
+    var nSec = secs.length;
+    var FC = 4;
+    var ws = {};
+    var merges = [];
+
+    setCell(ws,0,0,'Evaluation Report — '+lk+' — '+(currentUser.name?currentUser.name.th:currentUser.id), cs('1B4BA8','FFFFFF',true,0,false,'left'));
+    merges.push({s:{r:0,c:0},e:{r:0,c:FC+nSec+1}});
+
+    ['Emp. ID','Name','Position','Level'].forEach(function(h,ci){
+      setCell(ws,2,ci,h,cs('1B4BA8','FFFFFF',true,0,true,'center'));
+      merges.push({s:{r:2,c:ci},e:{r:3,c:ci}});
+    });
+    secs.forEach(function(sec,si){
+      var nm=(sec.name.en||sec.name.th)+' '+sec.pct+'%';
+      setCell(ws,2,FC+si,nm,cs('F5B731','FFFFFF',true,90,true,'center'));
+      merges.push({s:{r:2,c:FC+si},e:{r:3,c:FC+si}});
+    });
+    setCell(ws,2,FC+nSec,'Total',cs('1B4BA8','FFFFFF',true,0,false,'center'));
+    merges.push({s:{r:2,c:FC+nSec},e:{r:3,c:FC+nSec}});
+    setCell(ws,2,FC+nSec+1,'Grade',cs('1B4BA8','FFFFFF',true,0,false,'center'));
+    merges.push({s:{r:2,c:FC+nSec+1},e:{r:3,c:FC+nSec+1}});
+
+    ids.forEach(function(id,ri){
+      var row=4+ri; var u=USERS[id]; var e=evalStore[id]||{};
+      var bg=ri%2===0?'EBF0FA':'FFFFFF';
+      [id,u.name?u.name.th:'',u.position?u.position.th:'',u.level||''].forEach(function(v,ci){
+        setCell(ws,row,ci,v,cs(bg,'1A1A2E',false,0,true,ci===0?'center':'left'));
+      });
+      var fs=e.finalScores||{};
+      secs.forEach(function(sec,si){
+        var sum=0,cnt=0;
+        (sec.items||[]).forEach(function(item,ii){
+          var v=(fs[si]&&fs[si][ii]!==undefined)?fs[si][ii]:(fs[si+'_'+ii]!==undefined)?fs[si+'_'+ii]:undefined;
+          if(v!==undefined){sum+=v;cnt++;}
+        });
+        var avg=cnt>0?Math.round(sum/cnt*100)/100:null;
+        setCell(ws,row,FC+si,avg||'—',cs(bg,avg?'1A1A2E':'999999',false,0,false,'center'));
+      });
+      var ft=e.finalTotal||null;
+      var gl=getGL(ft);
+      var gc=gl?gradeColors[gl]:'AAAAAA';
+      setCell(ws,row,FC+nSec,ft?Math.round(ft*100)/100:'—',cs(gc,'FFFFFF',true,0,false,'center'));
+      setCell(ws,row,FC+nSec+1,gl?(gl+' - '+gradeLabels[gl]):'—',cs(gc,'FFFFFF',true,0,false,'center'));
+    });
+
+    var cws=[{wch:14},{wch:22},{wch:22},{wch:14}];
+    secs.forEach(function(){cws.push({wch:7});});
+    cws.push({wch:10},{wch:16});
+    ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:4+ids.length,c:FC+nSec+1}});
+    ws['!merges']=merges;
+    ws['!cols']=cws;
+    ws['!rows']=[{hpt:20},{hpt:6},{hpt:70},{hpt:4}];
+    var sn=lk.substring(0,31);
+    wb.SheetNames.push(sn);
+    wb.Sheets[sn]=ws;
+  });
+
+  XLSX.writeFile(wb,'TeamReport_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  showToast('Export Excel สำเร็จ','success');
 }
 
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
