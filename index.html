@@ -1641,7 +1641,7 @@ function showProposalDetail(propId) {
   var body=document.getElementById('proposal-detail-body');
   var title=document.getElementById('proposal-detail-title');
   var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง (Promotion)':'ปรับพิเศษ (Special Adjustment)';
-  if (title) title.textContent=typeLabel+' — '+(u.name?u.name.th:p.emp_id);
+  if (title) { title.textContent=typeLabel+' — '+(u.name?u.name.th:p.emp_id); title.setAttribute('data-prop-id', propId); }
   if (!body) return;
   function sec(label, items) {
     var rows=items.filter(function(r){return r[1];}).map(function(r,i){
@@ -1671,13 +1671,104 @@ function showProposalDetail(propId) {
 }
 
 function printProposalDetail() {
-  var body=document.getElementById('proposal-detail-body');
-  var title=document.getElementById('proposal-detail-title');
-  if (!body) return;
+  var propId = document.getElementById('proposal-detail-title').getAttribute('data-prop-id');
+  var p = proposalStore.find(function(x){ return x.id===propId; });
+  if (!p) {
+    // Fallback: use current body content
+    var body=document.getElementById('proposal-detail-body');
+    var title=document.getElementById('proposal-detail-title');
+    if (!body) return;
+    var win=window.open('','_blank');
+    win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Proposal</title><style>body{font-family:TH Sarabun New,Arial;padding:30px;font-size:14px;}</style></head><body><h2>'+title.textContent+'</h2>'+body.innerHTML+'</body></html>');
+    win.document.close();
+    setTimeout(function(){win.print();},500);
+    return;
+  }
+  var u=USERS[p.emp_id]||{};
+  var proposer=USERS[p.proposed_by]||{};
+  var typeLabel=p.proposal_type==='promotion'?'เลื่อนตำแหน่ง / Promotion':'ปรับพิเศษ / Special Adjustment';
+  var date=p.created_at?p.created_at.substring(0,10):'';
+
+  function field(label, value) {
+    return '<div style="margin-bottom:6px;"><span style="font-size:11px;color:#666;">'+label+'</span><p style="margin:2px 0 0;font-size:14px;font-weight:500;color:#111;border-bottom:0.5px solid #ddd;padding-bottom:4px;">'+value+'</p></div>';
+  }
+  function section(partNum, labelTh, labelEn, content) {
+    return '<div style="margin-bottom:18px;">'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
+      +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">'+partNum+'</span>'
+      +'<span style="font-size:13px;font-weight:500;">'+labelTh+' / '+labelEn+'</span>'
+      +'</div>'
+      +'<div style="background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:10px 12px;min-height:50px;font-size:13px;line-height:1.7;color:#1A1A2E;">'+content+'</div>'
+      +'</div>';
+  }
+
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Recommendation Form</title>'
+    +'<style>'
+    +'@import url("https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600&display=swap");'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{font-family:Sarabun,TH Sarabun New,Arial,sans-serif;font-size:14px;color:#1A1A2E;background:white;padding:30px 40px;max-width:800px;margin:0 auto;}'
+    +'@media print{body{padding:0 20px;}@page{margin:15mm;}}'
+    +'</style></head><body>'
+
+    // Company header
+    +'<div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #1A1A2E;">'
+    +'<p style="font-size:11px;letter-spacing:2px;color:#444;margin-bottom:4px;">AKARA RESOURCES CO., LTD.</p>'
+    +'<h1 style="font-size:20px;font-weight:600;margin-bottom:4px;">แบบฟอร์มเสนอพิจารณา</h1>'
+    +'<p style="font-size:13px;color:#555;">Recommendation Form — Performance Appraisal Review 2026</p>'
+    +'</div>'
+
+    // Doc info bar
+    +'<div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:12px;color:#555;">'
+    +'<span>ประเภท: <strong style="color:#1A1A2E;">'+typeLabel+'</strong></span>'
+    +'<span>วันที่ / Date: <strong style="color:#1A1A2E;">'+date+'</strong></span>'
+    +'</div>'
+
+    // Part A
+    +'<div style="margin-bottom:18px;">'
+    +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:1px solid #1A1A2E;padding-bottom:4px;">'
+    +'<span style="background:#1A1A2E;color:white;font-size:10px;padding:2px 8px;border-radius:10px;">Part A</span>'
+    +'<span style="font-size:13px;font-weight:500;">ข้อมูลพนักงาน / Employee Information</span>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#f9f9f9;border:0.5px solid #ccc;border-radius:4px;padding:10px 12px;">'
+    +field('รหัสพนักงาน / Employee ID', p.emp_id)
+    +field('ชื่อ-สกุล / Full Name', u.name?u.name.th:p.emp_id)
+    +field('ฝ่าย/แผนก / Department', u.dept?u.dept.th:'—')
+    +field('ตำแหน่งปัจจุบัน / Current Position', p.current_position||'—')
+    +field('วันที่เริ่มงาน / Start Date', u.startDate?u.startDate:'—')
+    +field('อายุงาน / Tenure', u.startDate?tenureLabel(u.startDate):'—')
+    +field('ตำแหน่งที่เสนอ / Proposed Position', p.proposed_position||'—')
+    +field('Level', u.level||'—')
+    +'</div></div>';
+
+  if (p.proposal_type==='promotion') {
+    html += section('Part B','จุดแข็งและศักยภาพ','Key Strengths', p.key_strengths||'—');
+    html += section('Part C','ผลงานโดดเด่น','Key Achievements',
+      (p.achievement||'—') + (p.special_project?'<br><br><em>โครงการพิเศษ:</em> '+p.special_project:''));
+    html += section('Part D','จุดที่ต้องพัฒนา','Areas for Development', p.to_be_developed||'—');
+    html += section('Part E','ความคาดหวัง','Expectations', p.expectation||'—');
+  } else {
+    html += section('Part B','รายละเอียด','Details', p.to_be_developed||'—');
+    html += section('Part C','เหตุผล','Reason', p.expectation||'—');
+  }
+
+  // Signatures
+  html += '<div style="margin-top:30px;display:grid;grid-template-columns:1fr 1fr;gap:40px;border-top:1px solid #1A1A2E;padding-top:20px;">'
+    +'<div><p style="font-size:11px;color:#666;margin-bottom:30px;">ลงชื่อผู้เสนอ / Proposed by</p>'
+    +'<div style="border-top:0.5px solid #1A1A2E;padding-top:6px;">'
+    +'<p style="font-size:13px;font-weight:500;">'+( proposer.name?proposer.name.th:p.proposed_by||'')+'</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:2px;">'+(proposer.position?proposer.position.th:'')+'</p>'
+    +'</div></div>'
+    +'<div><p style="font-size:11px;color:#666;margin-bottom:30px;">ลงชื่ออนุมัติ / Approved by</p>'
+    +'<div style="border-top:0.5px solid #1A1A2E;padding-top:6px;">'
+    +'<p style="font-size:13px;color:#999;">................................................</p>'
+    +'<p style="font-size:11px;color:#666;margin-top:4px;">วันที่ / Date: ................................</p>'
+    +'</div></div></div>'
+    +'</body></html>';
+
   var win=window.open('','_blank');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Proposal</title><style>body{font-family:TH Sarabun New,Arial;padding:20px;font-size:14px;}h2{color:#1B4BA8;}</style></head><body><h2>'+title.textContent+'</h2>'+body.innerHTML+'</body></html>');
+  win.document.write(html);
   win.document.close();
-  setTimeout(function(){win.print();},500);
+  setTimeout(function(){win.print();},600);
 }
 
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
