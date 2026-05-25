@@ -2918,8 +2918,10 @@ function importTopicsCSV(event) {
         EVAL_DATA_EDIT[lk].sections = Object.values(parsed[lk]);
       }
     });
-    showToast('นำเข้า CSV เรียบร้อย — กด บันทึก เพื่อใช้งาน','success');
+    showToast('นำเข้า CSV เรียบร้อย — กำลังบันทึกลง Sheets...','success');
     renderTeSections();
+    // Auto-save all levels to Sheets after import
+    saveAllLevels();
   };
   reader.readAsText(file,'UTF-8');
   event.target.value = '';
