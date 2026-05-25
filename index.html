@@ -329,6 +329,10 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span data-th="ผลการประเมินของฉัน" data-en="My Results">ผลการประเมินของฉัน</span>
       </div>
+      <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');renderProposalList();">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+        <span data-th="ข้อเสนอปรับ" data-en="Proposals">ข้อเสนอปรับ</span>
+      </div>
     </div>
 
     <div class="nav-group" id="nav-hr" style="display:none">
@@ -1583,7 +1587,17 @@ function renderProposalList() {
   var wrap = document.getElementById('proposal-list-wrap');
   if (!wrap) return;
   var ft = (document.getElementById('proposal-filter-type')||{}).value || '';
-  var list = proposalStore.filter(function(p){ return !ft || p.proposal_type===ft; });
+  // Filter by subordinates for non-HR Final approvers
+  var list = proposalStore.filter(function(p){
+    if (ft && p.proposal_type !== ft) return false;
+    if (currentUser.isFinal && !currentUser.isHR) {
+      var subs = Object.keys(USERS).filter(function(id){
+        return USERS[id].finalId === currentUser.id && !USERS[id].inactive;
+      });
+      return subs.indexOf(p.emp_id) !== -1;
+    }
+    return true;
+  });
   list.sort(function(a,b){ return (b.created_at||'').localeCompare(a.created_at||''); });
   var cnt = document.getElementById('proposal-count');
   if (cnt) cnt.textContent = list.length + (currentLang==='th'?' รายการ':' proposals');
