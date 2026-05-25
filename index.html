@@ -1712,7 +1712,7 @@ function printProposalDetail() {
 
     // Company header
     +'<div style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #1A1A2E;">'
-    +'<p style="font-size:11px;letter-spacing:2px;color:#444;margin-bottom:4px;">AKARA RESOURCES PUBLIC CO., LTD.</p>'
+    +'<p style="font-size:11px;letter-spacing:2px;color:#444;margin-bottom:4px;">AKARA RESOURCES CO., LTD.</p>'
     +'<h1 style="font-size:20px;font-weight:600;margin-bottom:4px;">แบบฟอร์มเสนอพิจารณา</h1>'
     +'<p style="font-size:13px;color:#555;">Recommendation Form — Performance Appraisal Review 2026</p>'
     +'</div>'
@@ -2518,8 +2518,9 @@ function renderHrReport(){
         var items = sec.items||[];
         var sum=0, cnt=0;
         items.forEach(function(item,ii) {
-          var k = si+'_'+ii;
-          if (fs[k]!==undefined){sum+=fs[k];cnt++;}
+          var v = (fs[si]&&fs[si][ii]!==undefined) ? fs[si][ii]
+                : (fs[si+'_'+ii]!==undefined) ? fs[si+'_'+ii] : undefined;
+          if (v!==undefined){sum+=v;cnt++;}
         });
         var avg = cnt>0?(sum/cnt).toFixed(2):null;
         return '<td style="padding:6px 4px;text-align:center;background:'+bg+';border:1px solid #e5e7eb;color:'+(avg?'#1A1A2E':'#CCC')+';font-weight:'+(avg?'600':'400')+';">'+(avg||'—')+'</td>';
