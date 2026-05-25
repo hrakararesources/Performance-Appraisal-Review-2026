@@ -331,7 +331,7 @@ textarea{resize:vertical;min-height:70px;}
       </div>
       <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');renderProposalList();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        <span data-th="ข้อเสนอปรับ" data-en="Proposals">ข้อเสนอปรับ</span>
+        <span data-th="เสนอพิจารณา" data-en="Proposals">ข้อเสนอพิจารณา</span>
       </div>
     </div>
 
@@ -365,7 +365,7 @@ textarea{resize:vertical;min-height:70px;}
       </div>
       <div class="nav-item" onclick="showPage('page-hr-proposals');renderProposalList();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
-        <span data-th="ข้อเสนอปรับ" data-en="Proposals">ข้อเสนอปรับ</span>
+        <span data-th="เสนอพิจารณา" data-en="Proposals">ข้อเสนอพิจารณา</span>
       </div>
       <div class="nav-item" onclick="showPage('page-topic-editor')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -542,7 +542,7 @@ textarea{resize:vertical;min-height:70px;}
     <!-- HR PROPOSALS -->
     <div class="page" id="page-hr-proposals">
       <div class="card">
-        <div class="card-header"><div class="card-title">ข้อเสนอปรับ / Proposals</div></div>
+        <div class="card-header"><div class="card-title">เสนอพิจารณา / Recommendations</div></div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
           <select id="proposal-filter-type" onchange="renderProposalList()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;font-family:inherit;">
             <option value="">ทั้งหมด / All</option>
@@ -1463,7 +1463,7 @@ const PAGE_TITLES={
   'page-eval-others':{th:'ประเมินพนักงาน',en:'Evaluate Staff'},'page-eval-sub':{th:'ประเมินพนักงาน',en:'Evaluate Staff'},
   'page-inbox':{th:'กล่องจดหมาย',en:'Inbox'},'page-my-result':{th:'ผลการประเมินของฉัน',en:'My Results'},
   'page-hr-dashboard':{th:'แดชบอร์ด',en:'Dashboard'},'page-hr-employees':{th:'จัดการพนักงาน',en:'Manage Employees'},
-  'page-hr-report':{th:'รายงาน',en:'Reports'},'page-hr-proposals':{th:'ข้อเสนอปรับ',en:'Proposals'},'page-topic-editor':{th:'จัดการหัวข้อการประเมิน',en:'Manage Eval Topics'},'page-score-desc-editor':{th:'แก้ไขคำอธิบายคะแนน',en:'Edit Score Descriptions'},
+  'page-hr-report':{th:'รายงาน',en:'Reports'},'page-hr-proposals':{th:'เสนอพิจารณา',en:'Proposals'},'page-topic-editor':{th:'จัดการหัวข้อการประเมิน',en:'Manage Eval Topics'},'page-score-desc-editor':{th:'แก้ไขคำอธิบายคะแนน',en:'Edit Score Descriptions'},
   'page-hr-settings':{th:'ตั้งค่า',en:'Settings'},'page-proposal':{th:'แบบฟอร์มเสนอปรับ',en:'Proposal Form'},
 };
 function showPage(pid){
@@ -2031,7 +2031,7 @@ function renderEvalOthers(){
   const rows=subs.map(sid=>{
     const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
     const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr data-sid=\\\""+(sid)+"\\\">\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
+    return ("<tr data-sid=\\\""+(sid)+"\\\">\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอพิจารณา':'Recommend')+"</button>":"")+"</td>\n    </tr>");
   // Add View Proposal buttons
   if (currentUser.isFinal) {
     subs.forEach(function(sid) {
