@@ -1442,6 +1442,8 @@ function setupSidebar(){
   if(tenEl){const y=calcTenure(u.startDate);tenEl.textContent=y!==null?tenureLabel(u.startDate):'';tenEl.style.display=y!==null?'':'none';}
   document.getElementById('nav-employee').style.display=u.isHR?'none':'';
   document.getElementById('nav-hr').style.display=u.isHR?'':'none';
+  var navPropFinal=document.getElementById('nav-proposals-final');
+  if(navPropFinal) navPropFinal.style.display=(u.isFinal&&!u.isHR)?'':'none';
   const subs=SUBORDINATES[u.id]||[];
   const navOthers=document.getElementById('nav-eval-others');
   if(navOthers){navOthers.style.display=subs.length>0?'':'none';
@@ -1457,7 +1459,7 @@ const PAGE_TITLES={
   'page-eval-others':{th:'ประเมินพนักงาน',en:'Evaluate Staff'},'page-eval-sub':{th:'ประเมินพนักงาน',en:'Evaluate Staff'},
   'page-inbox':{th:'กล่องจดหมาย',en:'Inbox'},'page-my-result':{th:'ผลการประเมินของฉัน',en:'My Results'},
   'page-hr-dashboard':{th:'แดชบอร์ด',en:'Dashboard'},'page-hr-employees':{th:'จัดการพนักงาน',en:'Manage Employees'},
-  'page-hr-report':{th:'รายงาน',en:'Reports'},'page-topic-editor':{th:'จัดการหัวข้อการประเมิน',en:'Manage Eval Topics'},'page-score-desc-editor':{th:'แก้ไขคำอธิบายคะแนน',en:'Edit Score Descriptions'},
+  'page-hr-report':{th:'รายงาน',en:'Reports'},'page-hr-proposals':{th:'ข้อเสนอปรับ',en:'Proposals'},'page-topic-editor':{th:'จัดการหัวข้อการประเมิน',en:'Manage Eval Topics'},'page-score-desc-editor':{th:'แก้ไขคำอธิบายคะแนน',en:'Edit Score Descriptions'},
   'page-hr-settings':{th:'ตั้งค่า',en:'Settings'},'page-proposal':{th:'แบบฟอร์มเสนอปรับ',en:'Proposal Form'},
 };
 function showPage(pid){
