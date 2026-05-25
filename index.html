@@ -146,8 +146,7 @@ table tr:hover td{background:var(--bg);}
 select,textarea{font-family:'Sarabun',sans-serif;font-size:14px;border:1.5px solid var(--border);border-radius:var(--radius);padding:8px 12px;background:var(--bg);color:var(--text);width:100%;}
 select:focus,textarea:focus{outline:none;border-color:var(--primary-light);background:white;}
 textarea{resize:vertical;min-height:70px;}
-.modal-overlay.hidden{display:none!important;}
-.modal-overlay{position:fixed!important;inset:0!important;background:rgba(15,30,50,.5);z-index:99999!important;display:flex;align-items:center;justify-content:center;padding:1rem;}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,30,50,.5);z-index:1000;display:flex;align-items:center;justify-content:center;padding:1rem;}
 .modal{background:white;border-radius:14px;padding:1.75rem;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;}
 .modal-title{font-size:17px;font-weight:700;color:var(--primary);}
@@ -1556,7 +1555,7 @@ function renderHrSummaryCard() {
 }
 
 
-// ── PROPOSAL LIST & DETAIL ───────────────────────────────────
+// ── PROPOSAL FEATURES ────────────────────────────────────────
 function showEmpProposals(empId) {
   var list = proposalStore.filter(function(p){ return p.emp_id === empId; });
   if (list.length === 0) { showToast(currentLang==='th'?'ยังไม่มีข้อเสนอ':'No proposals',''); return; }
@@ -1587,8 +1586,8 @@ function renderProposalList() {
   var cnt = document.getElementById('proposal-count');
   if (cnt) cnt.textContent = list.length + (currentLang==='th'?' รายการ':' proposals');
   if (!list.length) { wrap.innerHTML='<p style="color:var(--text-muted);padding:2rem;text-align:center;">ยังไม่มีข้อเสนอ</p>'; return; }
-  var tc={promotion:'1565c0',special:'e67e22'};
-  var tl={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
+  var typeColors={promotion:'1565c0',special:'e67e22'};
+  var typeLabels={promotion:'เลื่อนตำแหน่ง',special:'ปรับพิเศษ'};
   wrap.innerHTML='<table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">วันที่</th>'
     +'<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;border:1px solid #C5D3F0;">พนักงาน</th>'
@@ -1603,12 +1602,14 @@ function renderProposalList() {
       var proposer=USERS[p.proposed_by]||{};
       var bg=ri%2===0?'#F8FAFF':'#FFFFFF';
       var date=p.created_at?p.created_at.substring(0,10):'';
+      var tc=typeColors[p.proposal_type]||'666';
+      var tl=typeLabels[p.proposal_type]||p.proposal_type;
       return '<tr>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+date+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;">'+(u.name?u.name[currentLang]||u.name.th:p.emp_id)+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;">'+(p.current_position||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-weight:600;color:#1B4BA8;">'+(p.proposed_position||'')+'</td>'
-        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc[p.proposal_type]+'22;color:#'+tc[p.proposal_type]+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+(tl[p.proposal_type]||p.proposal_type)+'</span></td>'
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
         +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button></td>'
@@ -2014,7 +2015,20 @@ function renderEvalOthers(){
   const rows=subs.map(sid=>{
     const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
     const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button> <button class=\\\"btn btn-sm btn-outline\\\" style=\\\"font-size:11px;\\\" onclick=\\\"showEmpProposals(\\x27\"+(sid)+\"\\x27)\\\">View</button>":"")+"</td>\n    </tr>");
+    return ("<tr data-sid=\\\""+(sid)+"\\\">\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+(eData.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+(selfDone?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':'ประเมิน / Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
+  // Add View Proposal buttons
+  if (currentUser.isFinal) {
+    subs.forEach(function(sid) {
+      var cell = container.querySelector('tr[data-sid="'+sid+'"] td:last-child');
+      if (!cell) return;
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-sm btn-outline';
+      btn.style.cssText = 'font-size:11px;margin-left:4px;';
+      btn.textContent = 'View';
+      btn.onclick = function(){ showEmpProposals(sid); };
+      cell.appendChild(btn);
+    });
+  }
   });
   container.innerHTML=("<table><thead><tr><th>"+(t('th-code'))+"</th><th>"+(t('th-name'))+"</th><th>"+(t('th-dept'))+"</th><th>"+(t('th-pos'))+"</th><th>Level</th><th>Self</th><th></th></tr></thead><tbody>"+(rows.join(''))+"</tbody></table>");
 }
