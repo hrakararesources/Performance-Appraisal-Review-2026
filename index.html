@@ -3575,7 +3575,7 @@ function confirmImport() {
 function exportEmployeeCSV() {
   const header = ALL_COLS.join(',');
   const rows = Object.entries(USERS)
-    .filter(([,u]) => !u.isHR)
+    .filter(([,u]) => !u.inactive)
     .map(([id, u]) => {
       const vals = [
         id,
