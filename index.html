@@ -2411,18 +2411,56 @@ function submitSubEval(){
     const chk=document.getElementById('chk-special');
     if(chk&&chk.checked){evalStore[currentSubId].specialAdj=true;evalStore[currentSubId].specialReason=document.getElementById('special-reason').value;}
     if(commentText) evalStore[currentSubId].finalComment=commentText;
-    addInboxMsg('HR001',{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("Final Eval – "+(userName(sub))+""),body:(""+(t('score'))+": "+(score.toFixed(2))+" ("+(getGrade(score).label)+")"),link:'page-hr-report'});
+    // Send inbox to all HR admins
+    Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
+      addInboxMsg(hrId,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
+        subject:("Final Eval – "+(userName(sub))+""),
+        body:(""+(t('score'))+": "+(score.toFixed(2))+" ("+(getGrade(score).label)+")"),
+        link:'page-hr-report'});
+    });
   } else {
     evalStore[currentSubId].sScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].sTotal=score;
     if(commentText) evalStore[currentSubId].sComment=commentText;
     const fid=USERS[currentSubId].finalId;
     if(fid)addInboxMsg(fid,{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:(""+(t('final-step'))+" – "+(userName(sub))+""),body:("S-Level "+(t('score'))+": "+(score.toFixed(2))+""),link:'page-eval-others'});
-    addInboxMsg('HR001',{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("รอ Final – "+(userName(sub))+""),body:("S-Eval "+(t('done'))+""),link:'page-hr-dashboard'});
+    Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
+      addInboxMsg(hrId,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
+        subject:("รอ Final – "+(userName(sub))+""),
+        body:("S-Eval "+(t('done'))+""),
+        link:'page-hr-dashboard'});
+    });
   }
   showToast((""+(t('sub-eval-saved'))+" – "+(userName(sub))+""),'success');
   setUnsaved(false);
   syncEval(currentSubId);
+
+  // Check if Final approver has completed all subordinates
+  if (currentUser.isFinal) {
+    var mySubs = (SUBORDINATES[currentUser.id]||[]).filter(function(sid){ return USERS[sid] && !USERS[sid].inactive; });
+    var allDone = mySubs.length > 0 && mySubs.every(function(sid){ return evalStore[sid] && evalStore[sid].finalTotal; });
+    if (allDone) {
+      // Show completion toast with option to notify HR
+      var msg = currentLang==='th'
+        ? 'ประเมินพนักงานในสังกัดครบทุกคนแล้ว\nต้องการส่งแจ้งเตือนไปยัง HR หรือไม่?'
+        : 'All subordinates have been evaluated.\nWould you like to notify HR?';
+      if (confirm(msg)) {
+        var hrMsg = currentLang==='th'
+          ? (userName(currentUser) + ' ประเมินพนักงานในสังกัดครบ ' + mySubs.length + ' คนแล้ว')
+          : (userName(currentUser) + ' has completed Final evaluation for all ' + mySubs.length + ' subordinates.');
+        Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
+          addInboxMsg(hrId, {
+            from: userName(currentUser),
+            subject: currentLang==='th' ? '✅ Final Eval ครบแล้ว — ' + userName(currentUser) : '✅ Final Eval Complete — ' + userName(currentUser),
+            body: hrMsg,
+            link: 'page-hr-report'
+          });
+        });
+        showToast(currentLang==='th' ? 'ส่งแจ้งเตือน HR เรียบร้อย' : 'HR notified successfully', 'success');
+      }
+    }
+  }
+
   showPage('page-eval-others');
 }
 
