@@ -2802,7 +2802,26 @@ function exportReport(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='AKR_Report_2026.csv';a.click();
   showToast(t('export-done'),'success');
 }
-function viewEmpReport(empId){showToast((""+(empId)+" – "+(currentLang==='th'?'ดูรายละเอียดในตาราง':'See details in table')+""),'');}
+function viewEmpReport(empId) {
+  var u = USERS[empId];
+  if (!u) return;
+  // Go to HR report page and filter by this employee's level and dept
+  showPage('page-hr-report');
+  renderHrReport();
+  // After render, scroll to the employee row
+  setTimeout(function() {
+    var rows = document.querySelectorAll('#report-table-wrap tr');
+    for (var i = 0; i < rows.length; i++) {
+      var firstTd = rows[i].querySelector('td:first-child');
+      if (firstTd && firstTd.textContent.trim() === empId) {
+        rows[i].style.outline = '3px solid #F5B731';
+        rows[i].style.background = '#FFFBEB';
+        rows[i].scrollIntoView({behavior:'smooth', block:'center'});
+        break;
+      }
+    }
+  }, 300);
+}
 function sendBroadcastEmail(type){
   if (type === 'self') {
     // Self: inbox only (ใช้ Line OA แทน email)
