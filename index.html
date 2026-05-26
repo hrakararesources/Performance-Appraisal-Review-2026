@@ -1650,7 +1650,7 @@ function renderProposalList() {
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
-        +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button></td>'
+        +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button>'        +(p.proposed_by===currentUser.id?' <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="deleteProposal(\''+p.id+'\')">ยกเลิก</button>':'')        +'</td>'
         +'</tr>';
     }).join('')+'</tbody></table>';
 }
@@ -1931,6 +1931,35 @@ function renderFinalReport() {
 
 function exportFinalReport() {
   showToast(currentLang==='th'?'ฟีเจอร์นี้อยู่ระหว่างพัฒนา':'Feature coming soon','');
+}
+
+
+function deleteProposal(propId) {
+  var p = proposalStore.find(function(x){ return x.id===propId; });
+  if (!p) return;
+  var u = USERS[p.emp_id]||{};
+  var name = u.name ? u.name[currentLang]||u.name.th : p.emp_id;
+  var msg = currentLang==='th'
+    ? 'ยืนยันการยกเลิกการเสนอพิจารณาของ ' + name + '?\nการดำเนินการนี้ไม่สามารถเรียกคืนได้'
+    : 'Confirm cancellation of recommendation for ' + name + '?\nThis action cannot be undone.';
+  if (!confirm(msg)) return;
+
+  gasRun('deleteProposal', {id: propId}).then(function(r) {
+    if (r && r.ok) {
+      proposalStore = proposalStore.filter(function(x){ return x.id !== propId; });
+      renderProposalList();
+      // Close modal if open
+      var modal = document.getElementById('modal-proposal-detail');
+      if (modal && !modal.classList.contains('hidden')) {
+        modal.classList.add('hidden');
+      }
+      showToast(currentLang==='th'?'ยกเลิกการเสนอพิจารณาเรียบร้อย':'Recommendation cancelled successfully', 'success');
+    } else {
+      showToast(currentLang==='th'?'เกิดข้อผิดพลาด กรุณาลองใหม่':'Error, please try again', '');
+    }
+  }).catch(function(e) {
+    showToast('Error: ' + e.message, '');
+  });
 }
 
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
