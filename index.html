@@ -2395,7 +2395,15 @@ function renderMyResult(){
         sec.items.forEach((_,ii)=>{if(scores[si]&&scores[si][ii]){sum+=scores[si][ii];cnt++;}});
         const avg=cnt>0?(sum/cnt):0;
         return ("<div class=\"section-score-row\"><div class=\"lbl\">"+(secLabel(sec))+" ("+(sec.pct)+"%)</div><div class=\"bar\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(avg/5*100)+"%;\"></div></div></div><div style=\"width:36px;text-align:right;font-weight:600;color:var(--primary);\">"+(avg>0?avg.toFixed(2):'—')+"</div></div>");
-      }).join(''))+"\n    </div>");
+      }).join(''))+"\\n    </div>");
+  // Show Final Approver comment if exists
+  if (eData.finalComment) {
+    var commentCard = document.createElement('div');
+    commentCard.className = 'card';
+    commentCard.style.marginTop = '1rem';
+    commentCard.innerHTML = '<div class="card-header"><div class="card-title">'+(currentLang==="th"?'ความคิดเห็นจาก Final Approver':'Final Approver Comment')+'</div></div><div style="padding:1rem;font-size:14px;line-height:1.7;white-space:pre-wrap;">'+eData.finalComment+'</div>';
+    container.appendChild(commentCard);
+  }
 }
 
 // ── HR DASHBOARD ──
