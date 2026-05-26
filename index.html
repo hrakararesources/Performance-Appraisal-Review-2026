@@ -1600,7 +1600,7 @@ function showEmpProposals(empId) {
     var tl = (p.proposal_type==='promotion')?'เลื่อนตำแหน่ง':'ปรับพิเศษ';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#F8FAFF;">'
       +'<div><div style="font-weight:600;">'+tl+'</div><div style="font-size:12px;color:#64748b;">'+date+'</div></div>'
-      +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">รายละเอียด</button>'
+      +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">"+(currentLang===\'th\'?\'รายละเอียด\':\'Details\')+"</button>'
       +'</div>';
   }).join('');
   modal.classList.remove('hidden');
@@ -1651,7 +1651,7 @@ function renderProposalList() {
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
-        +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button>'        +(p.proposed_by===currentUser.id?' <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="deleteProposal(\''+p.id+'\')">ยกเลิก</button>':'')        +'</td>'
+        +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button>'        +(p.proposed_by===currentUser.id?' <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="deleteProposal(\''+p.id+'\')">"+(currentLang===\'th\'?\'ยกเลิก\':\'Cancel\')+"</button>':'')        +'</td>'
         +'</tr>';
     }).join('')+'</tbody></table>';
 }
@@ -2065,7 +2065,7 @@ function renderGradeDistChart() {
       {g:'A', labelTh:'โดดเด่น', labelEn:'Role Model', range:'4.21–5.00', color:'#1e8449',
        descTh:'สร้างผลงานที่โดดเด่นและสม่ำเสมอ ปฏิบัติงานเป็นแบบอย่างที่ดี (Role Model) ในการสร้างมาตรฐาน บริหารความเสี่ยง และสาธิตพฤติกรรมที่เป็นเลิศ',
        descEn:'Delivers exceptional and consistent results. Acts as a Role Model by setting new standards, proactively mitigating risks, and demonstrating exemplary discipline and leadership.'},
-      {g:'A', labelTh:'เป็นความคาดหมาย', labelEn:'Proactive', range:'3.41–4.20', color:'#1565c0',
+      {g:'A', labelTh:'เกินความคาดหมาย', labelEn:'Proactive', range:'3.41–4.20', color:'#1565c0',
        descTh:'ส่งมอบงานคุณภาพสูงอย่างสม่ำเสมอ มีแนวทางการทำงานเชิงรุก (Proactive) สามารถทำงานได้ดีภายใต้แรงกดดัน และป้องกันปัญหาที่อาจเกิดขึ้นได้อย่างมีประสิทธิภาพ',
        descEn:'Consistently delivers high-quality work. Demonstrates a Proactive approach, performs well under pressure, and effectively prevents potential issues before they arise.'},
       {g:'A', labelTh:'เป็นไปตามความคาดหมาย', labelEn:'Reliable', range:'2.61–3.40', color:'#e67e22',
@@ -2074,7 +2074,7 @@ function renderGradeDistChart() {
       {g:'A', labelTh:'ต้องปรับปรุง', labelEn:'Developing', range:'1.81–2.60', color:'#e74c3c',
        descTh:'ผลงานไม่สอดคล้องหรือต่ำกว่ามาตรฐานที่กำหนดในบางด้าน ต้องการการดูแลอย่างใกล้ชิดและมีแผนพัฒนา (Development plan) ที่ชัดเจนเพื่อปรับปรุงการปฏิบัติงาน',
        descEn:'Performance is inconsistent or below the required standard in certain areas. Requires close supervision and a clear Development plan to bridge performance gaps.'},
-      {g:'A', labelTh:'ไม่น่าพอใจ', labelEn:'Unsatisfactory', range:'1.00–1.80', color:'#c0392b',
+      {g:'A', labelTh:'ไม่น่าพึงพอใจ', labelEn:'Unsatisfactory', range:'1.00–1.80', color:'#c0392b',
        descTh:'ผลการปฏิบัติงานต่ำกว่าเป้าหมายอย่างมีนัยสำคัญ พฤติกรรมที่พึงประสงค์แทบไม่ปรากฏ ไม่สามารถปฏิบัติตามมาตรฐานขั้นต่ำได้ หรือแสดงพฤติกรรมที่ก่อให้เกิดความเสี่ยงต่อองค์กร',
        descEn:'Performance is significantly below target. Positive behaviors are Hardly Observed. Fails to meet basic standards or demonstrates behaviors that pose risks to the organization.'},
     ];
