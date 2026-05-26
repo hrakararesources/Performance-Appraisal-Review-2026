@@ -1492,6 +1492,7 @@ function showPage(pid){
   closeSidebarOnMobile();
   document.querySelectorAll('.page').forEach(p=>{p.classList.remove('active');p.style.display='none';});
   const pg=document.getElementById(pid);if(pg){pg.classList.add('active');pg.classList.remove('hidden');pg.style.display='flex';}
+  var mainEl=document.querySelector('.main');if(mainEl)mainEl.scrollTop=0;
   const titleObj=PAGE_TITLES[pid]||{th:pid,en:pid};
   document.getElementById('topbar-title').textContent=titleObj[currentLang];
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
