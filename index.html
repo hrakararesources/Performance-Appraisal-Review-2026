@@ -2383,7 +2383,8 @@ function submitSubEval(){
   } else {
     evalStore[currentSubId].sScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].sTotal=score;
-    if(commentText) evalStore[currentSubId].sComment=commentText;
+    if(currentUser.isFinal) { if(commentText) evalStore[currentSubId].finalComment=commentText; }
+    else { if(commentText) evalStore[currentSubId].sComment=commentText; }
     const fid=USERS[currentSubId].finalId;
     if(fid)addInboxMsg(fid,{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:(""+(t('final-step'))+" – "+(userName(sub))+""),body:("S-Level "+(t('score'))+": "+(score.toFixed(2))+""),link:'page-eval-others'});
     addInboxMsg('HR001',{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("รอ Final – "+(userName(sub))+""),body:("S-Eval "+(t('done'))+""),link:'page-hr-dashboard'});
@@ -2666,8 +2667,8 @@ function renderHrReport(){
         + secCells
         + '<td style="padding:6px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;">'+(ft?ft.toFixed(2):'—')+'</td>'
         + '<td style="padding:6px 8px;text-align:center;border:1px solid #e5e7eb;background:'+(gl?gc:'#eee')+';color:white;font-weight:700;white-space:nowrap;">'+(gl?(gl+' '+glabel[gl]):'—')+'</td>'
-        + '<td style="padding:6px 8px;font-size:12px;color:#555;border:1px solid #e5e7eb;max-width:180px;white-space:pre-wrap;vertical-align:top;">'+(e.sComment||'—')+'</td>'
-        + '<td style="padding:6px 8px;font-size:12px;color:#555;border:1px solid #e5e7eb;max-width:180px;white-space:pre-wrap;vertical-align:top;">'+(e.finalComment||'—')+'</td>'
+        + '<td style="padding:6px 8px;font-size:12px;color:#555;border:1px solid #e5e7eb;max-width:160px;" title="'+(e.sComment||'')+'"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;">'+(e.sComment||'—')+'</div></td>'
+        + '<td style="padding:6px 8px;font-size:12px;color:#555;border:1px solid #e5e7eb;max-width:160px;" title="'+(e.finalComment||'')+'"><div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:150px;">'+(e.finalComment||'—')+'</div></td>'
         + '</tr>';
     });
 
