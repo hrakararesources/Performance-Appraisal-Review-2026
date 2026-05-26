@@ -2379,12 +2379,12 @@ function submitSubEval(){
     evalStore[currentSubId].finalTotal=score;
     const chk=document.getElementById('chk-special');
     if(chk&&chk.checked){evalStore[currentSubId].specialAdj=true;evalStore[currentSubId].specialReason=document.getElementById('special-reason').value;}
+    if(commentText) evalStore[currentSubId].finalComment=commentText;
     addInboxMsg('HR001',{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("Final Eval – "+(userName(sub))+""),body:(""+(t('score'))+": "+(score.toFixed(2))+" ("+(getGrade(score).label)+")"),link:'page-hr-report'});
   } else {
     evalStore[currentSubId].sScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].sTotal=score;
-    if(currentUser.isFinal) { if(commentText) evalStore[currentSubId].finalComment=commentText; }
-    else { if(commentText) evalStore[currentSubId].sComment=commentText; }
+    if(commentText) evalStore[currentSubId].sComment=commentText;
     const fid=USERS[currentSubId].finalId;
     if(fid)addInboxMsg(fid,{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:(""+(t('final-step'))+" – "+(userName(sub))+""),body:("S-Level "+(t('score'))+": "+(score.toFixed(2))+""),link:'page-eval-others'});
     addInboxMsg('HR001',{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("รอ Final – "+(userName(sub))+""),body:("S-Eval "+(t('done'))+""),link:'page-hr-dashboard'});
