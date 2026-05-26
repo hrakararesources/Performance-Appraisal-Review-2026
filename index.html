@@ -1882,7 +1882,8 @@ function renderFinalReport() {
     var secHeaders = secs.map(function(sec) {
       return '<th style="background:#FFF8E7;color:#7B5200;font-size:10px;font-weight:700;min-width:50px;text-align:center;border:1px solid #F5B731;padding:4px;">'
         +'<div style="writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap;font-size:10px;">'
-        +(sec.name[currentLang]||sec.name.th)+'<br/><span style="opacity:.8;">'+sec.pct+'%</span></div></th>';
+        +(sec.name[currentLang]||sec.name.th)+'</div>'
+        +'<div style="font-size:10px;color:#F5B731;font-weight:700;margin-top:4px;text-align:center;">'+sec.pct+'%</div></th>';
     }).join('');
     html += '<div style="margin-bottom:20px;">';
     html += '<div style="background:#374151;color:white;padding:8px 14px;font-weight:700;font-size:13px;border-radius:6px 6px 0 0;">'
