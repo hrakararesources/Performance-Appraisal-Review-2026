@@ -2599,6 +2599,7 @@ function renderHrReport(){
     if (!ids || ids.length===0) return;
     var secs = (EVAL_DATA[lk]&&EVAL_DATA[lk].sections)||[];
 
+    var pctHeaders = secs.map(function(sec) { return '<th style="background:#EBF0FA;color:#1B4BA8;font-size:11px;font-weight:700;text-align:center;border:1px solid #C5D3F0;padding:3px 4px;">'+sec.pct+'%</th>'; }).join('');
     // Section headers (vertical text via CSS writing-mode)
     var secHeaders = secs.map(function(sec) {
       return '<th style="padding:6px 4px;background:#FFF8E7;color:#7B5200;font-size:11px;font-weight:700;min-width:50px;max-width:60px;word-break:break-word;text-align:center;border:1px solid #F5B731;">'
@@ -2622,7 +2623,7 @@ function renderHrReport(){
       + secHeaders
       + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Total</th>'
       + '<th style="background:#EBF0FA;color:#1B4BA8;padding:8px;text-align:center;white-space:nowrap;border:1px solid #C5D3F0;font-weight:700;">Grade</th>'
-      + '<tr>'
+      + '</tr><tr>'
       + '<th colspan="4" style="background:#FFF8E7;border:1px solid #F5B731;"></th>'
       + pctHeaders
       + '<th style="background:#FFF8E7;border:1px solid #F5B731;"></th>'
