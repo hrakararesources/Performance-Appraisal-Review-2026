@@ -1031,6 +1031,11 @@ function setLang(lang) {
   if(currentPage === 'page-hr-report') renderHrReport();
   if(currentPage === 'page-topic-editor') initTopicEditor();
   if(currentPage === 'page-score-desc-editor') initDescEditor();
+  if(currentPage === 'page-self-eval') renderSelfEval();
+  if(currentPage === 'page-eval-others') renderEvalOthers();
+  if(currentPage === 'page-hr-proposals') renderProposalList();
+  if(currentPage === 'page-final-report') renderFinalReport();
+  if(currentPage === 'page-hr-employees') renderHrEmployees();
   if(currentUser) setupSidebar();
   if(currentPage==='page-eval-sub'&&currentSubId) renderSLevelSummary();
   if(pid==='page-proposal') toggleProposalType();
