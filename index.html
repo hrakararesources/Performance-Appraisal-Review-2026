@@ -3475,7 +3475,7 @@ function processCSVText(text) {
     'is_final':'is_final','isfinal':'is_final',
     'start_date':'start_date','startdate':'start_date','วันเริ่มงาน':'start_date',
     'tenure_years':'_skip','tenureyears':'_skip',
-    'password':'password','รหัสผ่าน':'password',
+    'password':'pass','pass':'pass','รหัสผ่าน':'pass',
   };
 
   const headers = rawHeaders.map(h => headerMap[h] || h);
@@ -3541,7 +3541,7 @@ function confirmImport() {
     const userData = {
       name:       { th: o.name_th, en: o.name_en || o.name_th },
       level:      o.level,
-      pass:       o.password || '00000',
+      pass:       o.pass || o.password || '00000',
       dept:       { th: o.dept_th, en: o.dept_en || o.dept_th },
       position:   { th: o.position_th, en: o.position_en || o.position_th },
       email:      o.email || '',
