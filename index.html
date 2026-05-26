@@ -2716,15 +2716,13 @@ function exportReportExcel() {
     return;
   }
 
-  var gradeColors = {A:'1e8449', B:'1565c0', C:'e67e22', D:'e74c3c', E:'c0392b'};
-  var gradeLabels = {A:'Role Model', B:'Proactive', C:'Reliable', D:'Developing', E:'Unsatisfactory'};
-
+  var gradeColors = {A:'1e8449',B:'1565c0',C:'e67e22',D:'e74c3c',E:'c0392b'};
+  var gradeLabels = {A:'Role Model',B:'Proactive',C:'Reliable',D:'Developing',E:'Unsatisfactory'};
   function getGL(s) {
     if (!s) return null;
     if (s>=4.21) return 'A'; if (s>=3.41) return 'B';
     if (s>=2.61) return 'C'; if (s>=1.81) return 'D'; return 'E';
   }
-
   function cs(fg, fc, bold, rot, wrap, ha) {
     return {
       font: {bold:!!bold, color:{rgb:fc||'1A1A2E'}, name:'Arial', sz:10},
@@ -2734,15 +2732,34 @@ function exportReportExcel() {
                left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
     };
   }
-
   function setCell(ws, r, c, val, style) {
     var ref = XLSX.utils.encode_cell({r:r, c:c});
     ws[ref] = {v:val, t:typeof val==='number'?'n':'s', s:style};
   }
+  function getSecAvg(scores, si, items) {
+    var sum=0, cnt=0;
+    items.forEach(function(item,ii) {
+      var v = (scores[si]&&scores[si][ii]!==undefined)?scores[si][ii]
+            : (scores[si+'_'+ii]!==undefined)?scores[si+'_'+ii]:undefined;
+      if (v!==undefined){sum+=v;cnt++;}
+    });
+    return cnt>0?Math.round(sum/cnt*100)/100:null;
+  }
 
   var wb = {SheetNames:[], Sheets:{}};
   var levelGroups = {};
-  Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; }).forEach(function(id) {
+  // Apply current filters
+  var filterLevel = (document.getElementById('report-filter-level')||{}).value||'';
+  var filterDept = (document.getElementById('report-filter-dept')||{}).value||'';
+  var filterStatus = (document.getElementById('report-filter-status')||{}).value||'';
+
+  Object.keys(USERS).filter(function(id) {
+    var u = USERS[id];
+    if (u.inactive) return false;
+    if (filterLevel && u.level !== filterLevel) return false;
+    if (filterDept && (u.dept?u.dept.th:'') !== filterDept) return false;
+    return true;
+  }).forEach(function(id) {
     var lk = USERS[id].level||'Unknown';
     if (!levelGroups[lk]) levelGroups[lk] = [];
     levelGroups[lk].push(id);
@@ -2753,77 +2770,87 @@ function exportReportExcel() {
     if (!ids || ids.length===0) return;
     var secs = (EVAL_DATA[lk]&&EVAL_DATA[lk].sections)||[];
     var nSec = secs.length;
-    var FC = 5;
+    var FC = 5; // Fixed columns: ID, Name, Dept, Position, Level
+
     var ws = {};
     var merges = [];
 
-    // Title
-    setCell(ws,0,0,'Performance Appraisal Review 2026 - '+lk, cs('1B4BA8','FFFFFF',true,0,false,'left'));
-    merges.push({s:{r:0,c:0},e:{r:0,c:FC+nSec+1}});
-    setCell(ws,1,0,'Akara Resources | Final Evaluation Score by Section', cs('F8F9FA','888888',false,0,false,'left'));
-    merges.push({s:{r:1,c:0},e:{r:1,c:FC+nSec+1}});
+    // Row 0: Title
+    setCell(ws,0,0,'Evaluation Report — '+lk, cs('1B4BA8','FFFFFF',true,0,false,'left'));
+    merges.push({s:{r:0,c:0},e:{r:0,c:FC+nSec*3+3}});
 
-    // Fixed headers
-    ['Emp. ID','Name - Surname','Department','Position','Level'].forEach(function(h,ci) {
-      setCell(ws,3,ci,h,cs('1B4BA8','FFFFFF',true,0,true,'center'));
-      merges.push({s:{r:3,c:ci},e:{r:4,c:ci}});
+    // Row 1: blank
+    // Row 2-3: Headers
+    // Fixed headers (merge row 2-3)
+    ['Emp. ID','Name','Department','Position','Level'].forEach(function(h,ci) {
+      setCell(ws,2,ci,h,cs('1B4BA8','FFFFFF',true,0,true,'center'));
+      merges.push({s:{r:2,c:ci},e:{r:3,c:ci}});
     });
 
-    // Section headers - vertical text
+    // Section headers: Self / S-Level / Final (3 columns per section)
     secs.forEach(function(sec,si) {
       var nm = (sec.name.en||sec.name.th)+' '+sec.pct+'%';
-      setCell(ws,3,FC+si,nm,cs('F5B731','FFFFFF',true,90,true,'center'));
-      merges.push({s:{r:3,c:FC+si},e:{r:4,c:FC+si}});
+      setCell(ws,2,FC+si*3,nm,cs('FFF8E7','7B5200',true,90,true,'center'));
+      merges.push({s:{r:2,c:FC+si*3},e:{r:2,c:FC+si*3+2}});
+      setCell(ws,3,FC+si*3,'Self',cs('FFF8E7','7B5200',true,0,false,'center'));
+      setCell(ws,3,FC+si*3+1,'S-Level',cs('FFF8E7','7B5200',true,0,false,'center'));
+      setCell(ws,3,FC+si*3+2,'Final',cs('FFF8E7','7B5200',true,0,false,'center'));
     });
 
-    setCell(ws,3,FC+nSec,'Total Score',cs('1B4BA8','FFFFFF',true,0,true,'center'));
-    merges.push({s:{r:3,c:FC+nSec},e:{r:4,c:FC+nSec}});
-    setCell(ws,3,FC+nSec+1,'Grade',cs('1B4BA8','FFFFFF',true,0,false,'center'));
-    merges.push({s:{r:3,c:FC+nSec+1},e:{r:4,c:FC+nSec+1}});
+    // Total / Grade / Comments
+    var tCol = FC+nSec*3;
+    ['Self Total','S-Level Total','Final Total','Grade','S-Level Comment','Final Comment'].forEach(function(h,i) {
+      setCell(ws,2,tCol+i,h,cs('1B4BA8','FFFFFF',true,0,true,'center'));
+      merges.push({s:{r:2,c:tCol+i},e:{r:3,c:tCol+i}});
+    });
 
     // Data rows
     ids.forEach(function(id,ri) {
-      var row = 5+ri;
-      var u = USERS[id];
-      var e = evalStore[id]||{};
-      var bg = ri%2===0?'EBF0FA':'FFFFFF';
-      [id, u.name?u.name.th:'', u.dept?u.dept.th:'', u.position?u.position.th:'', u.level||''].forEach(function(v,ci) {
-        setCell(ws,row,ci,v,cs(bg,'1A1A2E',false,0,true,ci===0?'center':'left'));
-      });
-      var fs = e.finalScores||{};
-      secs.forEach(function(sec,si) {
-        var items = sec.items||[];
-        var sum=0, cnt=0;
-        items.forEach(function(item,ii) {
-          var k = si+'_'+ii;
-          if (fs[k]!==undefined){sum+=fs[k];cnt++;}
+      var row=4+ri; var u=USERS[id]; var e=evalStore[id]||{};
+      var bg=ri%2===0?'EBF0FA':'FFFFFF';
+
+      [id, u.name?u.name.th:'', u.dept?u.dept.th:'', u.position?u.position.th:'', u.level||'']
+        .forEach(function(v,ci) {
+          setCell(ws,row,ci,v,cs(bg,'1A1A2E',false,0,true,ci===0?'center':'left'));
         });
-        var avg = cnt>0?Math.round(sum/cnt*100)/100:null;
-        setCell(ws,row,FC+si,avg||'—',cs(bg,avg?'1A1A2E':'999999',false,0,false,'center'));
+
+      var ss=e.selfScores||{}, svs=e.sScores||{}, fvs=e.finalScores||{};
+      secs.forEach(function(sec,si) {
+        var items=sec.items||[];
+        var sa=getSecAvg(ss,si,items);
+        var sva=getSecAvg(svs,si,items);
+        var fa=getSecAvg(fvs,si,items);
+        setCell(ws,row,FC+si*3,  sa||'—', cs(bg,sa?'1A1A2E':'999999',false,0,false,'center'));
+        setCell(ws,row,FC+si*3+1,sva||'—',cs(bg,sva?'1A1A2E':'999999',false,0,false,'center'));
+        setCell(ws,row,FC+si*3+2,fa||'—', cs(bg,fa?'1A1A2E':'999999',false,0,false,'center'));
       });
-      var ft = e.finalTotal||null;
-      var gl = getGL(ft);
-      var gc = gl?gradeColors[gl]:'AAAAAA';
-      setCell(ws,row,FC+nSec,ft?Math.round(ft*100)/100:'—',cs(gc,'FFFFFF',true,0,false,'center'));
-      setCell(ws,row,FC+nSec+1,gl?(gl+' - '+gradeLabels[gl]):'—',cs(gc,'FFFFFF',true,0,false,'center'));
+
+      var st=e.selfTotal||null, svt=e.sTotal||null, ft=e.finalTotal||null;
+      var gl=getGL(ft); var gc=gl?gradeColors[gl]:'AAAAAA';
+      setCell(ws,row,tCol,  st?Math.round(st*100)/100:'—',  cs(bg,'1A1A2E',true,0,false,'center'));
+      setCell(ws,row,tCol+1,svt?Math.round(svt*100)/100:'—',cs(bg,'1A1A2E',true,0,false,'center'));
+      setCell(ws,row,tCol+2,ft?Math.round(ft*100)/100:'—',  cs(gc,'FFFFFF',true,0,false,'center'));
+      setCell(ws,row,tCol+3,gl?(gl+' '+gradeLabels[gl]):'—',cs(gc,'FFFFFF',true,0,false,'center'));
+      setCell(ws,row,tCol+4,e.sComment||'',    cs(bg,'555555',false,0,true,'left'));
+      setCell(ws,row,tCol+5,e.finalComment||'',cs(bg,'555555',false,0,true,'left'));
     });
 
-    var cws = [{wch:14},{wch:24},{wch:18},{wch:24},{wch:12}];
-    secs.forEach(function(){cws.push({wch:7});});
-    cws.push({wch:11},{wch:16});
-    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:5+ids.length,c:FC+nSec+1}});
-    ws['!merges'] = merges;
-    ws['!cols'] = cws;
-    ws['!rows'] = [{hpt:22},{hpt:14},{hpt:6},{hpt:70},{hpt:4}];
-    var sn = lk.substring(0,31);
+    // Column widths
+    var cws=[{wch:14},{wch:22},{wch:18},{wch:24},{wch:12}];
+    secs.forEach(function(){cws.push({wch:7},{wch:7},{wch:7});});
+    cws.push({wch:10},{wch:10},{wch:10},{wch:16},{wch:25},{wch:25});
+    ws['!ref']=XLSX.utils.encode_range({s:{r:0,c:0},e:{r:4+ids.length,c:tCol+5}});
+    ws['!merges']=merges;
+    ws['!cols']=cws;
+    ws['!rows']=[{hpt:20},{hpt:6},{hpt:70},{hpt:20}];
+    var sn=lk.substring(0,31);
     wb.SheetNames.push(sn);
-    wb.Sheets[sn] = ws;
+    wb.Sheets[sn]=ws;
   });
 
-  XLSX.writeFile(wb,'PerformanceAppraisal_2026_'+new Date().toISOString().slice(0,10)+'.xlsx');
+  XLSX.writeFile(wb,'EvalReport_'+new Date().toISOString().slice(0,10)+'.xlsx');
   showToast('Export Excel สำเร็จ','success');
 }
-
 function exportReport(){
   const empIds=Object.keys(USERS).filter(id=>!USERS[id].isHR);
   let csv=(""+(t('th-code'))+",Name/ชื่อ,"+(t('th-dept'))+","+(t('th-pos'))+",อายุงาน,Level,Self,S-Eval,Final,"+(t('th-grade'))+",Label,Special\\n");
