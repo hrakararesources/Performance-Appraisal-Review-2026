@@ -3303,7 +3303,7 @@ function renderDescPreview(){
 const REQUIRED_COLS = ['emp_id','name_th','dept_th','position_th','level'];
 const ALL_COLS      = ['emp_id','name_th','name_en','dept_th','dept_en',
                        'position_th','position_en','level','email',
-                       'supervisor_id','final_id','is_final','start_date','password'];
+                       'supervisor_id','final_id','is_final','is_hr','start_date','pass','inactive'];
 
 const VALID_LEVELS = [
   'O-Level',
@@ -3586,8 +3586,10 @@ function exportEmployeeCSV() {
         u.email||'',
         u.supervisorId||'', u.finalId||'',
         u.isFinal?'true':'false',
-        u.startDate||'',
+        u.isHR?'true':'false',
+        u.startDate?u.startDate.substring(0,10):'',
         u.pass||'',
+        u.inactive?'true':'false',
       ];
       return vals.map(v => ("\""+(String(v).replace(/"/g,'""'))+"\"")).join(',');
     });
