@@ -2,7 +2,11 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Cache-C
+        +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
+        +'<button class="btn btn-sm btn-primary" data-propdetail="'+p.id+'">ดูรายละเอียด</button>'
+        +(p.proposed_by===currentUser.id?' <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" data-propdelete="'+p.id+'">ยกเลิก</button>':'')
+        +'</td>'ontrol" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1600,7 +1604,6 @@ function showEmpProposals(empId) {
     var tl = (p.proposal_type==='promotion')?'เลื่อนตำแหน่ง':'ปรับพิเศษ';
     return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #e5e7eb;border-radius:8px;margin-bottom:8px;background:#F8FAFF;">'
       +'<div><div style="font-weight:600;">'+tl+'</div><div style="font-size:12px;color:#64748b;">'+date+'</div></div>'
-      +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">"+(currentLang===\'th\'?\'รายละเอียด\':\'Details\')+"</button>'
       +'</div>';
   }).join('');
   modal.classList.remove('hidden');
@@ -1651,9 +1654,11 @@ function renderProposalList() {
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;"><span style="background:#'+tc+'22;color:#'+tc+';padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600;">'+tl+'</span></td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;font-size:12px;color:#64748b;">'+(proposer.name?proposer.name[currentLang]||proposer.name.th:p.proposed_by||'')+'</td>'
         +'<td style="padding:7px 8px;background:'+bg+';border:1px solid #e5e7eb;text-align:center;">'
-        +'<button class="btn btn-sm btn-primary" onclick="showProposalDetail(\''+p.id+'\')">ดูรายละเอียด</button>'        +(p.proposed_by===currentUser.id?' <button class="btn btn-sm" style="background:#FEF2F2;color:#DC2626;border:1px solid #FECACA;" onclick="deleteProposal(\''+p.id+'\')">"+(currentLang===\'th\'?\'ยกเลิก\':\'Cancel\')+"</button>':'')        +'</td>'
         +'</tr>';
     }).join('')+'</tbody></table>';
+  // Translate button labels
+  wrap.querySelectorAll('[data-propdetail]').forEach(function(b){ b.textContent = currentLang==='th'?'ดูรายละเอียด':'Details'; });
+  wrap.querySelectorAll('[data-propdelete]').forEach(function(b){ b.textContent = currentLang==='th'?'ยกเลิก':'Cancel'; });
 }
 
 function showProposalDetail(propId) {
