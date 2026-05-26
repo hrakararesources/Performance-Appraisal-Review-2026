@@ -2355,6 +2355,7 @@ function openSubEval(subId, readOnly){
     ?("<div style=\"display:flex;align-items:center;gap:12px;\"><div style=\"width:48px;height:48px;border-radius:50%;background:"+(sg.bg)+";color:"+(sg.color)+";display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;\">"+(sg.letter)+"</div><div><div style=\"font-weight:600;\">"+(sg.label)+"</div><div style=\"font-size:13px;color:var(--text-muted);\">"+(t('score'))+": "+(selfResult.toFixed(2))+"</div></div></div>")
     :("<p style=\"color:var(--text-muted);\">"+(currentLang==='th'?'ยังไม่มีข้อมูล Self Eval':'No self-evaluation data')+"</p>");
   buildEvalSections('sub-eval-sections',sub.level,subScores,'sub');
+  updateSubProgress(sub.level);
   const chk=document.getElementById('chk-special');if(chk)chk.checked=false;
   const rb=document.getElementById('special-reason-box');if(rb)rb.style.display='none';
   showPage('page-eval-sub');
