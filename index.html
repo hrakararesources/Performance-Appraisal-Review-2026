@@ -3570,8 +3570,36 @@ function confirmImport() {
 
   closeModal('modal-import-result');
   importPreviewData = [];
-  // Sync all imported users to Sheets
-  importPreviewData_ids.forEach(id => syncUser(id));
+  // Bulk save all imported users to Sheets in one call (much faster)
+  var usersToSave = importPreviewData_ids.map(function(id) {
+    var u = USERS[id];
+    if (!u) return null;
+    return {
+      emp_id: id,
+      name_th: u.name?u.name.th:'', name_en: u.name?u.name.en:'',
+      pass: u.pass||'00000',
+      dept_th: u.dept?u.dept.th:'', dept_en: u.dept?u.dept.en:'',
+      position_th: u.position?u.position.th:'', position_en: u.position?u.position.en:'',
+      level: u.level||'',
+      start_date: u.startDate?u.startDate.substring(0,10):'',
+      supervisor_id: u.supervisorId||'',
+      final_id: u.finalId||'',
+      is_final: u.isFinal?'TRUE':'FALSE',
+      is_hr: u.isHR?'TRUE':'FALSE',
+      inactive: u.inactive?'TRUE':'FALSE',
+      last_promotion: u.lastPromotion||'',
+      email: u.email||'',
+    };
+  }).filter(Boolean);
+  
+  gasRun('bulkSaveUsers', {users: usersToSave}).then(function(r) {
+    if (r && r.ok) {
+      showToast((currentLang==='th'?'บันทึกลง Sheets: ':'Saved to Sheets: ')+(r.added||0)+(currentLang==='th'?' ใหม่, ':' new, ')+(r.updated||0)+(currentLang==='th'?' อัปเดต':'updated'),'success');
+    }
+  }).catch(function(e) {
+    // Fallback: sync one by one
+    importPreviewData_ids.forEach(function(id){ syncUser(id); });
+  });
   renderHrEmpList();
   renderHrDashboard();
   showToast(
