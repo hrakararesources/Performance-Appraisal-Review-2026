@@ -4450,28 +4450,70 @@ function saveSettings() {
   if (currentPage === 'page-eval-others') renderEvalOthers();
 }
 
-function loadDeadlineSetting() {
-  var saved = localStorage.getItem('kpi_self_deadline');
-  if (saved) {
-    SELF_DEADLINE = new Date(saved);
-    SELF_DEADLINE.setHours(23, 59, 59, 999);
-    var el = document.getElementById('setting-self-deadline');
-    if (el) el.value = saved;
+async function loadDeadlineSetting() {
+
+  try {
+
+    // ดึง deadline ล่าสุดจาก Google Sheets / GAS
+    const dl = await gasRun('getDeadlines');
+
+    // SELF
+    if (dl && dl.self) {
+      SELF_DEADLINE = new Date(dl.self);
+      SELF_DEADLINE.setHours(23,59,59,999);
+
+      localStorage.setItem('kpi_self_deadline', dl.self);
+
+      var el = document.getElementById('setting-self-deadline');
+      if (el) el.value = dl.self;
+    }
+
+    // S-LEVEL
+    if (dl && dl.slevel) {
+      SLEVEL_DEADLINE = new Date(dl.slevel);
+      SLEVEL_DEADLINE.setHours(23,59,59,999);
+
+      localStorage.setItem('kpi_slevel_deadline', dl.slevel);
+
+      var el2 = document.getElementById('setting-slevel-deadline');
+      if (el2) el2.value = dl.slevel;
+    }
+
+    // FINAL
+    if (dl && dl.final) {
+      FINAL_DEADLINE = new Date(dl.final);
+      FINAL_DEADLINE.setHours(23,59,59,999);
+
+      localStorage.setItem('kpi_final_deadline', dl.final);
+
+      var el3 = document.getElementById('setting-final-deadline');
+      if (el3) el3.value = dl.final;
+    }
+
+  } catch(err) {
+
+    console.warn('โหลด deadline จาก server ไม่ได้ ใช้ localStorage แทน', err);
+
+    // fallback localStorage
+    var saved = localStorage.getItem('kpi_self_deadline');
+    if (saved) {
+      SELF_DEADLINE = new Date(saved);
+      SELF_DEADLINE.setHours(23,59,59,999);
+    }
+
+    var saved2 = localStorage.getItem('kpi_slevel_deadline');
+    if (saved2) {
+      SLEVEL_DEADLINE = new Date(saved2);
+      SLEVEL_DEADLINE.setHours(23,59,59,999);
+    }
+
+    var saved3 = localStorage.getItem('kpi_final_deadline');
+    if (saved3) {
+      FINAL_DEADLINE = new Date(saved3);
+      FINAL_DEADLINE.setHours(23,59,59,999);
+    }
   }
-  var saved2 = localStorage.getItem('kpi_slevel_deadline');
-  if (saved2) {
-    SLEVEL_DEADLINE = new Date(saved2);
-    SLEVEL_DEADLINE.setHours(23, 59, 59, 999);
-    var el2 = document.getElementById('setting-slevel-deadline');
-    if (el2) el2.value = saved2;
-  }
-  var saved3 = localStorage.getItem('kpi_final_deadline');
-  if (saved3) {
-    FINAL_DEADLINE = new Date(saved3);
-    FINAL_DEADLINE.setHours(23, 59, 59, 999);
-    var el3 = document.getElementById('setting-final-deadline');
-    if (el3) el3.value = saved3;
-  }
+
   updateDeadlineStatus();
   updateSLevelDeadlineStatus();
   updateFinalDeadlineStatus();
