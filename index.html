@@ -1214,7 +1214,6 @@ const EVAL_DATA = {
 
 // ── DATA LAYER (google.script.run) ───────────────────────────
 let USERS = {};
-let SUBORDINATES = {};
 let evalStore = {}, inbox = {};
 let currentUser = null, currentSubId = null, selfScores = {}, subScores = {}, currentPage = '';
 let GAS_READY = false;
@@ -1242,19 +1241,91 @@ var SUBORDINATES = {};
 // ── Wrap google.script.run เป็น Promise ──────────────────────
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxsSGgfR_QZ1bSiQ_u-RJW64S0iTKTwzAmCkX1dGX-4giPKYfTPtjRSGhTHIS4i2NEx/exec'; // ← วาง Web App URL ที่นี่
 
+// gasRunPost — ใช้ fetch POST สำหรับ payload ขนาดใหญ่ (ไม่มี URL limit)
+// ส่งเป็น form body เพราะ GAS Web App ไม่รองรับ CORS preflight จาก GitHub Pages
+function gasRunPost(fnName, data) {
+  var cbName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+  var b64 = '';
+  try { b64 = btoa(unescape(encodeURIComponent(JSON.stringify(data)))); } catch(e) { b64 = ''; }
+
+  // ถ้า encode ได้ ใช้ JSONP GET แต่แบ่ง chunk แทน (safe กว่า CORS POST)
+  // chunk size 5000 chars ต่อ request
+  if (b64) {
+    var CHUNK = 5000;
+    if (b64.length <= CHUNK) {
+      // ส่งรวดเดียวผ่าน JSONP ปกติ (b64 ไม่เกิน limit)
+      return new Promise(function(resolve, reject) {
+        var cName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
+        var timer = setTimeout(function() { delete window[cName]; reject(new Error('Timeout')); }, 30000);
+        window[cName] = function(res) { clearTimeout(timer); delete window[cName]; if (res && res.error) reject(new Error(res.error)); else resolve(res); };
+        var qs = 'action=' + encodeURIComponent(fnName) + '&data=' + encodeURIComponent(b64) + '&encoded=1&callback=' + cName;
+        var s = document.createElement('script');
+        s.src = GAS_URL + '?' + qs;
+        s.onerror = function() { clearTimeout(timer); delete window[cName]; reject(new Error('Script error')); };
+        document.head.appendChild(s);
+      });
+    }
+
+    // payload ใหญ่มาก → ใช้ chunk protocol ที่มีอยู่แล้วใน GAS (receiveChunk/commitChunks)
+    var chunks = [];
+    for (var i = 0; i < b64.length; i += CHUNK) chunks.push(b64.slice(i, i + CHUNK));
+    var txId = 'tx_' + Date.now();
+    var ci = 0;
+    function sendChunk() {
+      if (ci >= chunks.length) {
+        return new Promise(function(res, rej) {
+          var cName = '_cb_' + Date.now() + '_x';
+          var timer = setTimeout(function() { delete window[cName]; rej(new Error('Timeout')); }, 30000);
+          window[cName] = function(r) { clearTimeout(timer); delete window[cName]; if (r && r.error) rej(new Error(r.error)); else res(r); };
+          var qs = 'action=commitChunks&data=' + encodeURIComponent(JSON.stringify({tx_id: txId, action: fnName})) + '&callback=' + cName;
+          var s = document.createElement('script'); s.src = GAS_URL + '?' + qs; document.head.appendChild(s);
+        });
+      }
+      return new Promise(function(res, rej) {
+        var cName = '_cb_' + Date.now() + '_' + ci;
+        var timer = setTimeout(function() { delete window[cName]; rej(new Error('Timeout')); }, 30000);
+        window[cName] = function(r) { clearTimeout(timer); delete window[cName]; if (r && r.error) rej(new Error(r.error)); else res(r); };
+        var payload = JSON.stringify({tx_id: txId, idx: ci, chunk: chunks[ci], total: chunks.length});
+        var qs = 'action=receiveChunk&data=' + encodeURIComponent(payload) + '&callback=' + cName;
+        var s = document.createElement('script'); s.src = GAS_URL + '?' + qs;
+        s.onerror = function() { clearTimeout(timer); delete window[cName]; rej(new Error('Script error')); };
+        document.head.appendChild(s);
+      }).then(function() { ci++; return sendChunk(); });
+    }
+    return sendChunk();
+  }
+
+  // fallback สุดท้าย: ส่งทีละ record ผ่าน syncUser (เรียกจาก caller)
+  return Promise.reject(new Error('Cannot encode payload'));
+}
+
+// URL limit safety: ถ้า payload เกิน 6000 chars ให้ใช้ POST แทน JSONP
+var GAS_URL_LIMIT = 6000;
+
+// URL limit safety: ถ้า payload เกิน 6000 chars ให้ใช้ POST แทน JSONP
+var GAS_URL_LIMIT = 6000;
+
 function gasRun(fnName) {
   var args = Array.prototype.slice.call(arguments, 1);
   var params = {action: fnName};
-  if (args.length > 0) {
-    var jsonStr = JSON.stringify(args[0]);
-    // Use btoa encoding to avoid special chars breaking JSONP URL
-    try {
-      params.data = btoa(unescape(encodeURIComponent(jsonStr)));
+  var jsonStr = args.length > 0 ? JSON.stringify(args[0]) : null;
+
+  // ถ้า payload ใหญ่ ใช้ POST แทน JSONP เพื่อหลีกเลี่ยง URL limit
+  if (jsonStr) {
+    var b64est = '';
+    try { b64est = btoa(unescape(encodeURIComponent(jsonStr))); } catch(e) { b64est = ''; }
+    if (b64est.length > GAS_URL_LIMIT) {
+      return gasRunPost(fnName, args[0]);
+    }
+    if (b64est) {
+      params.data = b64est;
       params.encoded = '1';
-    } catch(e) {
-      params.data = jsonStr;
+    } else {
+      // btoa ล้มเหลว (Unicode) → fallback POST
+      return gasRunPost(fnName, args[0]);
     }
   }
+
   return new Promise(function(resolve, reject) {
     var cbName = '_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2);
     var timer = setTimeout(function() {
@@ -3671,7 +3742,8 @@ function confirmImport() {
 
   closeModal('modal-import-result');
   importPreviewData = [];
-  // Bulk save all imported users to Sheets in one call (much faster)
+
+  // Build usersToSave list
   var usersToSave = importPreviewData_ids.map(function(id) {
     var u = USERS[id];
     if (!u) return null;
@@ -3682,7 +3754,7 @@ function confirmImport() {
       dept_th: u.dept?u.dept.th:'', dept_en: u.dept?u.dept.en:'',
       position_th: u.position?u.position.th:'', position_en: u.position?u.position.en:'',
       level: u.level||'',
-      start_date: u.startDate?u.startDate.substring(0,10):'',
+      start_date: u.startDate?String(u.startDate).substring(0,10):'',
       supervisor_id: u.supervisorId||'',
       final_id: u.finalId||'',
       is_final: u.isFinal?'TRUE':'FALSE',
@@ -3692,23 +3764,59 @@ function confirmImport() {
       email: u.email||'',
     };
   }).filter(Boolean);
-  
-  gasRun('bulkSaveUsers', {users: usersToSave}).then(function(r) {
-    if (r && r.ok) {
-      showToast((currentLang==='th'?'บันทึกลง Sheets: ':'Saved to Sheets: ')+(r.added||0)+(currentLang==='th'?' ใหม่, ':' new, ')+(r.updated||0)+(currentLang==='th'?' อัปเดต':'updated'),'success');
+
+  // แบ่งส่ง batch ละ 50 คน เพื่อหลีกเลี่ยง timeout และ payload limit
+  var BATCH_SIZE = 50;
+  var batches = [];
+  for (var bi = 0; bi < usersToSave.length; bi += BATCH_SIZE) {
+    batches.push(usersToSave.slice(bi, bi + BATCH_SIZE));
+  }
+  var totalAdded = 0, totalUpdated = 0, batchIdx = 0;
+
+  function sendNextBatch() {
+    if (batchIdx >= batches.length) {
+      // ทั้งหมดเสร็จแล้ว
+      renderHrEmpList();
+      renderHrDashboard();
+      showToast(
+        currentLang==='th'
+          ? ('นำเข้าเสร็จ — ใหม่ '+added+' คน, อัปเดต '+updated+' คน (บันทึก Sheets: +'+totalAdded+' ใหม่, อัปเดต '+totalUpdated+')')
+          : ('Import done — '+added+' new, '+updated+' updated (Sheets: +'+totalAdded+' new, '+totalUpdated+' updated)'),
+        'success'
+      );
+      return;
     }
-  }).catch(function(e) {
-    // Fallback: sync one by one
-    importPreviewData_ids.forEach(function(id){ syncUser(id); });
-  });
-  renderHrEmpList();
-  renderHrDashboard();
+    var batch = batches[batchIdx];
+    batchIdx++;
+    gasRun('bulkSaveUsers', {users: batch}).then(function(r) {
+      if (r && r.ok) {
+        totalAdded   += (r.added   || 0);
+        totalUpdated += (r.updated || 0);
+      }
+      // แจ้ง progress ถ้ามีหลาย batch
+      if (batches.length > 1) {
+        showToast(
+          (currentLang==='th'?'กำลังบันทึก batch ':'Saving batch ') + batchIdx + '/' + batches.length + '…'
+        );
+      }
+      sendNextBatch();
+    }).catch(function(e) {
+      console.warn('bulkSaveUsers batch '+batchIdx+' failed, fallback to syncUser:', e);
+      // fallback: ส่งทีละคนสำหรับ batch ที่ล้มเหลว
+      batch.forEach(function(u){ syncUser(u.emp_id); });
+      sendNextBatch();
+    });
+  }
+
+  // แสดง toast เบื้องต้นทันที แล้วส่ง batch ใน background
   showToast(
     currentLang==='th'
-      ? ("นำเข้าเสร็จ — ใหม่ "+(added)+" คน, อัปเดต "+(updated)+" คน")
-      : ("Import done — "+(added)+" new, "+(updated)+" updated"),
-    'success'
+      ? ('นำเข้าเสร็จ — ใหม่ '+added+' คน, อัปเดต '+updated+' คน (กำลังบันทึก Sheets…)')
+      : ('Import done — '+added+' new, '+updated+' updated (Saving to Sheets…)')
   );
+  renderHrEmpList();
+  renderHrDashboard();
+  sendNextBatch();
 }
 
 // ── Export current USERS to CSV ───────────────────────────────────
