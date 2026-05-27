@@ -793,6 +793,14 @@ textarea{resize:vertical;min-height:70px;}
           <input type="date" id="setting-slevel-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
           <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="slevel-deadline-status-msg"></div>
         </div>
+
+        <div class="form-group" style="margin-bottom:1rem;">
+          <label style="font-weight:600;font-size:13px;color:var(--text-muted);display:block;margin-bottom:6px;">
+            📅 <span data-th="กำหนด Deadline Final Evaluation" data-en="Final Evaluation Deadline">กำหนด Deadline Final Evaluation</span>
+          </label>
+          <input type="date" id="setting-final-deadline" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:4px;" id="final-deadline-status-msg"></div>
+        </div>
         <button class="btn btn-primary" onclick="saveSettings()">
           <span data-th="บันทึก" data-en="Save">บันทึก</span>
         </button>
@@ -1302,9 +1310,6 @@ function gasRunPost(fnName, data) {
 // URL limit safety: ถ้า payload เกิน 6000 chars ให้ใช้ POST แทน JSONP
 var GAS_URL_LIMIT = 6000;
 
-// URL limit safety: ถ้า payload เกิน 6000 chars ให้ใช้ POST แทน JSONP
-var GAS_URL_LIMIT = 6000;
-
 function gasRun(fnName) {
   var args = Array.prototype.slice.call(arguments, 1);
   var params = {action: fnName};
@@ -1406,6 +1411,32 @@ async function loadFromSheets() {
     } catch(e) { console.warn('ScoreDescConfig load failed:', e); }
 
     try { var pr = await gasRun('getProposals'); if (pr && pr.proposals) proposalStore = pr.proposals; } catch(e) {}
+
+    // Load Deadlines from Sheets (shared across all users — overrides localStorage)
+    if (r.deadlines) {
+      if (r.deadlines.self) {
+        SELF_DEADLINE = new Date(r.deadlines.self);
+        SELF_DEADLINE.setHours(23, 59, 59, 999);
+        localStorage.setItem('kpi_self_deadline', r.deadlines.self);
+        var elSD = document.getElementById('setting-self-deadline');
+        if (elSD) elSD.value = r.deadlines.self;
+      }
+      if (r.deadlines.slevel) {
+        SLEVEL_DEADLINE = new Date(r.deadlines.slevel);
+        SLEVEL_DEADLINE.setHours(23, 59, 59, 999);
+        localStorage.setItem('kpi_slevel_deadline', r.deadlines.slevel);
+        var elSL = document.getElementById('setting-slevel-deadline');
+        if (elSL) elSL.value = r.deadlines.slevel;
+      }
+      if (r.deadlines.final) {
+        FINAL_DEADLINE = new Date(r.deadlines.final);
+        FINAL_DEADLINE.setHours(23, 59, 59, 999);
+        localStorage.setItem('kpi_final_deadline', r.deadlines.final);
+        var elFL = document.getElementById('setting-final-deadline');
+        if (elFL) elFL.value = r.deadlines.final;
+      }
+    }
+
     GAS_READY = true;
     hideSplash();
   } catch(err) {
@@ -2489,7 +2520,7 @@ function submitSubEval(){
   setUnsaved(false);
   syncEval(currentSubId);
   if (currentUser.isFinal) {
-    var mySubs = (SUBORDINATES[currentUser.id]||[]).filter(function(sid){ return USERS[sid] && !USERS[sid].inactive; });
+    var mySubs = getMySubordinates(currentUser).filter(function(sid){ return USERS[sid] && !USERS[sid].inactive; });
     var allDone = mySubs.length > 0 && mySubs.every(function(sid){ return evalStore[sid] && evalStore[sid].finalTotal; });
     if (allDone) {
       var msg = currentLang==='th'?'ประเมินพนักงานในสังกัดครบทุกคนแล้ว\nต้องการส่งแจ้งเตือนไปยัง HR หรือไม่?':'All subordinates evaluated.\nNotify HR?';
@@ -2623,6 +2654,13 @@ function addEmployee(){
     if(!SUBORDINATES[finalId].includes(id))SUBORDINATES[finalId].push(id);
   }
   closeModal('modal-add-emp');
+  // Clear form fields for next use
+  ['new-emp-id','new-emp-name','new-emp-name-en','new-emp-pass','new-emp-dept',
+   'new-emp-pos','new-emp-email','new-emp-sup','new-emp-final','new-emp-start'].forEach(function(fid){
+    var el = document.getElementById(fid); if(el) el.value = '';
+  });
+  var chkFinal = document.getElementById('new-emp-isfinal'); if(chkFinal) chkFinal.checked = false;
+  var chkHR = document.getElementById('new-emp-ishr'); if(chkHR) chkHR.checked = false;
   showToast((""+(t('add-emp-done'))+": "+(nameTh)+""),'success');
   syncUser(id);
   renderHrEmpList();renderHrDashboard();
@@ -3958,7 +3996,7 @@ function initScoreHistory() {
   // แสดงเฉพาะพนักงานที่อยู่ใต้ดูแล (หรือทุกคนถ้าเป็น HR)
   const empIds = currentUser.isHR
     ? Object.keys(USERS).filter(id => !USERS[id].inactive)
-    : (SUBORDINATES[currentUser.id] || []);
+    : getMySubordinates(currentUser).filter(id => USERS[id] && !USERS[id].inactive);
   empIds.sort((a,b) => {
     const na = USERS[a] ? (USERS[a].name.th||'') : a;
     const nb = USERS[b] ? (USERS[b].name.th||'') : b;
@@ -4295,6 +4333,7 @@ function gasPostScoreDescByLevel(data) {
 // ── SETTINGS & DEADLINE ──────────────────────────────────────
 var SELF_DEADLINE = null;
 var SLEVEL_DEADLINE = null;
+var FINAL_DEADLINE = null;
 
 // Lock check helpers
 function isSelfLocked() {
@@ -4306,7 +4345,9 @@ function isSLevelLocked() {
   return new Date() > SLEVEL_DEADLINE;
 }
 function isFinalLocked() {
-  return isSLevelLocked();
+  // Final มี deadline แยกต่างหาก ถ้าไม่ได้ตั้งไว้ = ไม่ lock
+  if (!FINAL_DEADLINE) return false;
+  return new Date() > FINAL_DEADLINE;
 }
 
 function saveSettings() {
@@ -4328,8 +4369,24 @@ function saveSettings() {
     SLEVEL_DEADLINE = null;
     localStorage.removeItem('kpi_slevel_deadline');
   }
+  var dl3 = document.getElementById('setting-final-deadline');
+  if (dl3 && dl3.value) {
+    FINAL_DEADLINE = new Date(dl3.value);
+    FINAL_DEADLINE.setHours(23, 59, 59, 999);
+    localStorage.setItem('kpi_final_deadline', dl3.value);
+  } else {
+    FINAL_DEADLINE = null;
+    localStorage.removeItem('kpi_final_deadline');
+  }
+  // Sync deadlines to Sheets so all users share the same deadline
+  gasRun('saveDeadlines', {
+    self:   (dl  && dl.value)  ? dl.value  : '',
+    slevel: (dl2 && dl2.value) ? dl2.value : '',
+    final:  (dl3 && dl3.value) ? dl3.value : ''
+  }).catch(function(e) { console.warn('saveDeadlines failed:', e); });
   updateDeadlineStatus();
   updateSLevelDeadlineStatus();
+  updateFinalDeadlineStatus();
   showToast(currentLang === 'th' ? 'บันทึกการตั้งค่าเรียบร้อย' : 'Settings saved', 'success');
   if (currentPage === 'page-eval-others') renderEvalOthers();
 }
@@ -4349,8 +4406,16 @@ function loadDeadlineSetting() {
     var el2 = document.getElementById('setting-slevel-deadline');
     if (el2) el2.value = saved2;
   }
+  var saved3 = localStorage.getItem('kpi_final_deadline');
+  if (saved3) {
+    FINAL_DEADLINE = new Date(saved3);
+    FINAL_DEADLINE.setHours(23, 59, 59, 999);
+    var el3 = document.getElementById('setting-final-deadline');
+    if (el3) el3.value = saved3;
+  }
   updateDeadlineStatus();
   updateSLevelDeadlineStatus();
+  updateFinalDeadlineStatus();
 }
 
 function updateDeadlineStatus() {
@@ -4388,6 +4453,26 @@ function updateSLevelDeadlineStatus() {
     msg.style.color = '#e67e22';
   } else {
     var days = Math.ceil((SLEVEL_DEADLINE - now) / (1000 * 60 * 60 * 24));
+    msg.textContent = currentLang === 'th' ? 'เหลืออีก ' + days + ' วัน' : days + ' days remaining';
+    msg.style.color = 'var(--success)';
+  }
+}
+
+function updateFinalDeadlineStatus() {
+  var msg = document.getElementById('final-deadline-status-msg');
+  if (!msg) return;
+  if (!FINAL_DEADLINE) {
+    msg.textContent = currentLang === 'th' ? 'ไม่ได้กำหนด Deadline (ไม่มีการ Lock)' : 'No deadline set (never locked)';
+    msg.style.color = 'var(--text-muted)';
+    return;
+  }
+  var now = new Date();
+  var isPast = now > FINAL_DEADLINE;
+  if (isPast) {
+    msg.textContent = currentLang === 'th' ? 'เลย Deadline แล้ว — Final Evaluation ถูก Lock' : 'Deadline passed — Final Evaluation locked';
+    msg.style.color = 'var(--danger)';
+  } else {
+    var days = Math.ceil((FINAL_DEADLINE - now) / (1000 * 60 * 60 * 24));
     msg.textContent = currentLang === 'th' ? 'เหลืออีก ' + days + ' วัน' : days + ' days remaining';
     msg.style.color = 'var(--success)';
   }
