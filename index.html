@@ -817,10 +817,54 @@ textarea{resize:vertical;min-height:70px;}
       <div class="card">
         <div class="card-header"><div class="card-title">📢 ประกาศผลการประเมิน</div></div>
         <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">พนักงานจะเห็นคะแนน Final และ Grade ในหน้าหลัก เมื่อ HR กดส่งผลแล้วเท่านั้น</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+
+        <!-- Filter แผนก -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <label style="font-size:13px;font-weight:600;color:var(--text);">กรองแผนก:</label>
+          <select id="release-filter-dept" onchange="renderReleaseTable()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:white;">
+            <option value="">ทุกแผนก</option>
+          </select>
+          <label style="font-size:13px;font-weight:600;color:var(--text);margin-left:8px;">สถานะ:</label>
+          <select id="release-filter-status" onchange="renderReleaseTable()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit;background:white;">
+            <option value="">ทั้งหมด</option>
+            <option value="unreleased">ยังไม่ส่งผล</option>
+            <option value="released">ส่งผลแล้ว</option>
+            <option value="hasfinal">มีคะแนน Final</option>
+          </select>
+        </div>
+
+        <!-- ปุ่ม action -->
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
           <button class="btn btn-primary" onclick="releaseAllResults()" style="background:#27ae60;border-color:#27ae60;">
-            📢 ส่งผลการประเมินให้พนักงานทุกคน
+            📢 ส่งผลทุกคนที่กรองไว้
           </button>
+          <button class="btn btn-outline" onclick="selectAllRelease(true)" style="font-size:13px;">
+            ✅ เลือกทั้งหมด
+          </button>
+          <button class="btn btn-outline" onclick="selectAllRelease(false)" style="font-size:13px;">
+            ☐ ยกเลิกทั้งหมด
+          </button>
+          <button class="btn btn-primary" onclick="releaseSelected()" style="font-size:13px;">
+            📨 ส่งผลที่เลือก
+          </button>
+        </div>
+
+        <!-- ตารางพนักงาน -->
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:var(--bg);border-bottom:2px solid var(--border);">
+                <th style="padding:8px 6px;text-align:left;width:36px;"><input type="checkbox" id="release-check-all" onchange="selectAllRelease(this.checked)"></th>
+                <th style="padding:8px 6px;text-align:left;">รหัส</th>
+                <th style="padding:8px 6px;text-align:left;">ชื่อ</th>
+                <th style="padding:8px 6px;text-align:left;">แผนก</th>
+                <th style="padding:8px 6px;text-align:center;">Final</th>
+                <th style="padding:8px 6px;text-align:center;">สถานะ</th>
+                <th style="padding:8px 6px;text-align:center;">ส่งผล</th>
+              </tr>
+            </thead>
+            <tbody id="release-table-body"></tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1062,7 +1106,7 @@ function setLang(lang) {
   if(currentPage === 'page-score-desc-editor') initDescEditor();
   if(currentPage === 'page-self-eval') renderSelfEvalPage();
   if(currentPage === 'page-my-result') renderMyResult();
-  if(currentPage === 'page-hr-settings') refreshDeadlineInputs();
+  if(currentPage === 'page-hr-settings'){ refreshDeadlineInputs(); initReleaseTable(); }
   if(currentPage === 'page-eval-others') renderEvalOthers();
   if(currentPage === 'page-hr-proposals') loadProposals();
   if(currentPage === 'page-final-report') renderFinalReport();
@@ -1663,7 +1707,7 @@ function showPage(pid){
   currentPage=pid;
   if(pid==='page-inbox')renderInbox();
   if(pid==='page-my-result')renderMyResult();
-  if(pid==='page-hr-settings') refreshDeadlineInputs();
+  if(pid==='page-hr-settings'){ refreshDeadlineInputs(); initReleaseTable(); }
   if(pid==='page-eval-others')renderEvalOthers();
   if(pid==='page-hr-dashboard')renderHrDashboard();
   if(pid==='page-hr-employees')renderHrEmpList();
@@ -4546,6 +4590,98 @@ function startDeadlinePolling() {
 
 
 // ── RELEASE RESULTS ─────────────────────────────────────────────
+
+// ── RELEASE TABLE ────────────────────────────────────────────────
+function initReleaseTable() {
+  // populate dept dropdown
+  var deptSel = document.getElementById('release-filter-dept');
+  if (!deptSel) return;
+  var depts = [...new Set(
+    Object.keys(USERS)
+      .filter(function(id){ return !USERS[id].isHR && !USERS[id].inactive; })
+      .map(function(id){ return USERS[id].dept ? (USERS[id].dept[currentLang] || USERS[id].dept.th || '') : ''; })
+  )].filter(Boolean).sort(function(a,b){ return a.localeCompare(b,'th'); });
+  deptSel.innerHTML = '<option value="">ทุกแผนก / All Depts</option>' +
+    depts.map(function(d){ return '<option value="'+d+'">'+d+'</option>'; }).join('');
+  renderReleaseTable();
+}
+
+function renderReleaseTable() {
+  var tbody = document.getElementById('release-table-body');
+  if (!tbody) return;
+  var deptFilter   = (document.getElementById('release-filter-dept')   || {}).value || '';
+  var statusFilter = (document.getElementById('release-filter-status') || {}).value || '';
+
+  var ids = Object.keys(USERS).filter(function(id) {
+    var u = USERS[id];
+    if (!u || u.isHR || u.inactive) return false;
+    var e = evalStore[id] || {};
+    var dept = u.dept ? (u.dept[currentLang] || u.dept.th || '') : '';
+    if (deptFilter && dept !== deptFilter) return false;
+    if (statusFilter === 'unreleased' && e.resultReleased) return false;
+    if (statusFilter === 'released'   && !e.resultReleased) return false;
+    if (statusFilter === 'hasfinal'   && !e.finalTotal) return false;
+    return true;
+  });
+
+  if (!ids.length) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:1.5rem;color:var(--text-muted);">ไม่พบพนักงาน</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = ids.map(function(id) {
+    var u = USERS[id];
+    var e = evalStore[id] || {};
+    var dept = u.dept ? (u.dept[currentLang] || u.dept.th || '—') : '—';
+    var isReleased = !!e.resultReleased;
+    var hasFinal = !!e.finalTotal;
+    var finalBadge = hasFinal
+      ? '<span class="badge badge-green">'+e.finalTotal.toFixed(2)+'</span>'
+      : '<span class="badge badge-gray">—</span>';
+    var statusBadge = isReleased
+      ? '<span class="badge" style="background:#e9f7ef;color:#1e8449;">ส่งแล้ว ✓</span>'
+      : '<span class="badge badge-gray">ยังไม่ส่ง</span>';
+        var toggleBtn = isReleased
+      ? '<button onclick="toggleReleaseResult(&quot;'+id+'&quot;,false)" style="font-size:11px;padding:3px 8px;background:#fdecea;color:#c0392b;border:1px solid #f5c6c6;border-radius:4px;cursor:pointer;">ยกเลิก</button>'
+      : '<button onclick="toggleReleaseResult(&quot;'+id+'&quot;,true)"  style="font-size:11px;padding:3px 8px;background:#27ae60;color:#fff;border:none;border-radius:4px;cursor:pointer;">ส่งผล</button>';
+    return '<tr style="border-bottom:1px solid var(--border);">'
+      + '<td style="padding:7px 6px;"><input type="checkbox" class="release-chk" data-id="'+id+'" '+(isReleased?'checked':'')+'></td>'
+      + '<td style="padding:7px 6px;font-family:monospace;font-size:11px;">'+id+'</td>'
+      + '<td style="padding:7px 6px;font-weight:500;">'+userName(u)+'</td>'
+      + '<td style="padding:7px 6px;color:var(--text-muted);">'+dept+'</td>'
+      + '<td style="padding:7px 6px;text-align:center;">'+finalBadge+'</td>'
+      + '<td style="padding:7px 6px;text-align:center;">'+statusBadge+'</td>'
+      + '<td style="padding:7px 6px;text-align:center;">'+toggleBtn+'</td>'
+      + '</tr>';
+  }).join('');
+}
+
+function selectAllRelease(checked) {
+  document.querySelectorAll('.release-chk').forEach(function(cb){ cb.checked = checked; });
+  var all = document.getElementById('release-check-all');
+  if (all) all.checked = checked;
+}
+
+async function releaseSelected() {
+  var selected = [...document.querySelectorAll('.release-chk:checked')].map(function(cb){ return cb.dataset.id; });
+  if (!selected.length) { showToast('กรุณาเลือกพนักงานก่อน'); return; }
+  showToast('กำลังส่งผล '+selected.length+' คน...');
+  var ok = 0;
+  for (var i = 0; i < selected.length; i++) {
+    try {
+      var res = await gasRun('releaseResultSingle', {emp_id: selected[i], release: true});
+      if (res && res.ok) {
+        if (!evalStore[selected[i]]) evalStore[selected[i]] = {};
+        evalStore[selected[i]].resultReleased = true;
+        ok++;
+      }
+    } catch(e) {}
+  }
+  showToast('✅ ส่งผลแล้ว '+ok+'/'+selected.length+' คน');
+  renderReleaseTable();
+}
+// ─────────────────────────────────────────────────────────────────
+
 async function releaseAllResults() {
   if (!currentUser || !currentUser.isHR) return;
   if (!confirm(currentLang === 'th'
