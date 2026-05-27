@@ -333,7 +333,7 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span data-th="ผลการประเมินของฉัน" data-en="My Results">ผลการประเมินของฉัน</span>
       </div>
-      <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');renderProposalList();">
+      <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');loadProposal();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-th="เสนอพิจารณา" data-en="Recommendations">เสนอพิจารณา</span>
       </div>
@@ -591,7 +591,7 @@ textarea{resize:vertical;min-height:70px;}
         <div class="card">
           <div class="card-header">
             <div class="card-title" id="t-round-status">สถานะรอบการประเมิน</div>
-            <button class="btn btn-sm btn-accent" onclick="hrCloseRound()" id="t-close-round-btn">ปิดรอบ + ส่ง Email</button>
+            <button class="btn btn-sm btn-accent" onclick="hrCloseRound()" id="t-close-round-btn" style="display:none;">ปิดรอบ + ส่ง Email</button>
           </div>
           <div class="tl" id="hr-timeline"></div>
         </div>
@@ -1811,6 +1811,26 @@ function renderProposalList() {
   // Translate buttons
   wrap.querySelectorAll('[data-propdetail]').forEach(function(b){ b.textContent = currentLang==='th'?'ดูรายละเอียด':'Details'; });
   wrap.querySelectorAll('[data-propdelete]').forEach(function(b){ b.textContent = currentLang==='th'?'ยกเลิก':'Cancel'; });
+}
+
+async function loadProposals() {
+
+  try {
+
+    const res = await gasRun('getProposals');
+
+    proposalStore = res.proposals || [];
+
+    renderProposalList();
+
+  } catch(err) {
+
+    console.error('โหลด proposal ไม่สำเร็จ', err);
+
+    proposalStore = [];
+
+    renderProposalList();
+  }
 }
 
 function showProposalDetail(propId) {
