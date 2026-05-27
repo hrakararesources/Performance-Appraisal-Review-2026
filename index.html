@@ -2612,7 +2612,8 @@ function renderInbox(){
 function renderMyResult(){
   const eData=evalStore[currentUser.id]||{};const container=document.getElementById('my-result-content');
   if(!eData.selfTotal){container.innerHTML=("<div class=\"card\"><p style=\"color:var(--text-muted);\">"+(t('no-data'))+"</p></div>");return;}
-  const sg=getGrade(eData.selfTotal);const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
+  const canSeeResult = currentUser.isHR || !!eData.resultReleased;
+  const sg=getGrade(eData.selfTotal);const fg=(canSeeResult && eData.finalTotal)?getGrade(eData.finalTotal):null;
   const ld=EVAL_DATA[currentUser.level];
   container.innerHTML=("\n    <div class=\"card\">\n      <div class=\"card-header\">\n        <div class=\"card-title\">"+(t('my-results'))+" – "+(userName(currentUser))+"</div>\n        <span class=\"badge badge-blue\">"+(currentUser.level)+"</span>\n      </div>\n      <div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;\">\n        <span class=\"badge badge-gray\">"+(currentUser.dept?currentUser.dept[currentLang]:'—')+"</span>\n        <span class=\"badge badge-gray\">"+(currentUser.position?currentUser.position[currentLang]:'—')+"</span>\n        "+(currentUser.startDate?(()=>{const y=calcTenure(currentUser.startDate);const {bg,color}=tenureBadgeColor(y);return ("<span class=\"badge\" style=\"background:"+(bg)+";color:"+(color)+";\">"+(tenureLabel(currentUser.startDate))+"</span>");})():'')+"\n        "+(eData.specialAdj?("<span class=\"badge badge-amber\">★ "+(currentLang==='th'?'ปรับพิเศษ':'Special Adj.')+"</span>"):'')+"\n      </div>\n      <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;\">\n        <div style=\"text-align:center;padding:1rem;background:"+(sg.bg)+";border-radius:var(--radius);\">\n          <div style=\"width:56px;height:56px;border-radius:50%;background:"+(sg.bg)+";color:"+(sg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(sg.letter)+"</div>\n          <div style=\"font-weight:700;color:"+(sg.color)+";\">"+(sg.label)+"</div>\n          <div style=\"font-size:13px;color:"+(sg.color)+";opacity:.8;\">Self: "+((eData.selfTotal||0).toFixed(2))+"</div>\n        </div>\n        <div style=\"text-align:center;padding:1rem;background:"+(fg?fg.bg:'var(--bg)')+";border-radius:var(--radius);\">\n          "+(fg?("<div style=\"width:56px;height:56px;border-radius:50%;background:"+(fg.bg)+";color:"+(fg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(fg.letter)+"</div><div style=\"font-weight:700;color:"+(fg.color)+";\">"+(fg.label)+"</div><div style=\"font-size:13px;color:"+(fg.color)+";opacity:.8;\">Final: "+(eData.finalTotal.toFixed(2))+"</div>"):("<div style=\"padding-top:1rem;color:var(--text-muted);\">"+(t('wait-eval'))+"</div>"))+"\n        </div>\n      </div>\n      <hr class=\"divider\">\n      <div class=\"card-title\" style=\"margin-bottom:.75rem;font-size:14px;\">"+(currentLang==='th'?'คะแนนแต่ละด้าน':'Score Breakdown')+"</div>\n      "+(ld.sections.map((sec,si)=>{
         const scores=eData.selfScores||{};let sum=0,cnt=0;
@@ -2620,8 +2621,21 @@ function renderMyResult(){
         const avg=cnt>0?(sum/cnt):0;
         return ("<div class=\"section-score-row\"><div class=\"lbl\">"+(secLabel(sec))+" ("+(sec.pct)+"%)</div><div class=\"bar\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(avg/5*100)+"%;\"></div></div></div><div style=\"width:36px;text-align:right;font-weight:600;color:var(--primary);\">"+(avg>0?avg.toFixed(2):'—')+"</div></div>");
       }).join(''))+"</div>");
-  // Show Final Approver comment if exists
-  if (eData.finalComment) {
+  // ถ้ายังไม่ release และมีผล final อยู่ — แสดง pending box
+  if (!canSeeResult && eData.finalTotal) {
+    var pendingBox = container.querySelector('[data-pending-result]');
+    if (!pendingBox) {
+      // หา final box div แล้วแทนที่ด้วย pending message
+      var allDivs = container.querySelectorAll('div[style*="text-align:center"]');
+      if (allDivs.length >= 2) {
+        allDivs[1].innerHTML = '<div style="font-size:28px;margin-bottom:6px;">⏳</div><div style="font-size:13px;color:var(--text-muted);">'+(currentLang==='th'?'รอประกาศผล':'Pending Release')+'</div>';
+        allDivs[1].style.background = 'var(--bg)';
+        allDivs[1].setAttribute('data-pending-result','1');
+      }
+    }
+  }
+  // Show Final Approver comment if exists (only after result released)
+  if (canSeeResult && eData.finalComment) {
     var commentCard = document.createElement('div');
     commentCard.className = 'card';
     commentCard.style.marginTop = '1rem';
