@@ -1437,6 +1437,7 @@ async function loadFromSheets() {
 
     GAS_READY = true;
     hideSplash();
+    startDeadlinePolling();
   } catch(err) {
     hideSplash();
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
@@ -4410,6 +4411,72 @@ function gasPostScoreDescByLevel(data) {
 }
 
 // ── SETTINGS & DEADLINE ──────────────────────────────────────
+
+// ── DEADLINE POLLING ────────────────────────────────────────────
+// Sync deadline จาก GAS ทุก 2 นาที — ทำให้ทุก browser เห็นค่าเดียวกัน
+// โดยไม่ต้องกด refresh เมื่อ Admin เปลี่ยน deadline
+var _deadlinePollingTimer = null;
+function startDeadlinePolling() {
+  if (_deadlinePollingTimer) clearInterval(_deadlinePollingTimer);
+  _deadlinePollingTimer = setInterval(async function () {
+    if (!GAS_READY) return;
+    try {
+      var dl = await gasRun('getDeadlines');
+
+      // SELF
+      if (dl && dl.self) {
+        var d = new Date(dl.self); d.setHours(23,59,59,999);
+        SELF_DEADLINE = d;
+        localStorage.setItem('kpi_self_deadline', dl.self);
+        var e = document.getElementById('setting-self-deadline');
+        if (e) e.value = dl.self;
+      } else {
+        SELF_DEADLINE = null;
+        localStorage.removeItem('kpi_self_deadline');
+        var e = document.getElementById('setting-self-deadline');
+        if (e) e.value = '';
+      }
+
+      // S-LEVEL
+      if (dl && dl.slevel) {
+        var d2 = new Date(dl.slevel); d2.setHours(23,59,59,999);
+        SLEVEL_DEADLINE = d2;
+        localStorage.setItem('kpi_slevel_deadline', dl.slevel);
+        var e2 = document.getElementById('setting-slevel-deadline');
+        if (e2) e2.value = dl.slevel;
+      } else {
+        SLEVEL_DEADLINE = null;
+        localStorage.removeItem('kpi_slevel_deadline');
+        var e2 = document.getElementById('setting-slevel-deadline');
+        if (e2) e2.value = '';
+      }
+
+      // FINAL
+      if (dl && dl.final) {
+        var d3 = new Date(dl.final); d3.setHours(23,59,59,999);
+        FINAL_DEADLINE = d3;
+        localStorage.setItem('kpi_final_deadline', dl.final);
+        var e3 = document.getElementById('setting-final-deadline');
+        if (e3) e3.value = dl.final;
+      } else {
+        FINAL_DEADLINE = null;
+        localStorage.removeItem('kpi_final_deadline');
+        var e3 = document.getElementById('setting-final-deadline');
+        if (e3) e3.value = '';
+      }
+
+      // Re-render หน้าที่เปิดอยู่ถ้าเกี่ยวกับ deadline
+      if (currentPage === 'page-self-eval') renderSelfEvalPage();
+      if (currentPage === 'page-hr-settings' && currentUser && currentUser.isHR) {
+        var s = document.getElementById('setting-self-deadline');
+        // UI อัปเดตแล้วข้างบน ไม่ต้อง render ใหม่
+      }
+
+    } catch(e) { /* ไม่แสดง error — polling ล้มเหลวเงียบๆ */ }
+  }, 2 * 60 * 1000); // ทุก 2 นาที
+}
+// ────────────────────────────────────────────────────────────────
+
 var SELF_DEADLINE = null;
 var SLEVEL_DEADLINE = null;
 var FINAL_DEADLINE = null;
@@ -4502,12 +4569,12 @@ async function loadDeadlineSetting() {
 
       var el2 = document.getElementById('setting-slevel-deadline');
       if (el2) el2.value = dl.slevel;
-    } else {
-      SLEVEL_DEADLINE = null;
-      localStorage.removeItem('kpi_slevel_deadline');
-      var el2 = document.getElementById('setting-slevel-deadline');
-      if (el2) el2.value = '';
-    }
+       } else {                                          // ← เพิ่ม
+      SELF_DEADLINE = null;                           // ← เพิ่ม
+      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
+      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
+      if (el) el.value = '';                          // ← เพิ่ม
+    }                                                 // ← เพิ่ม
     
 
     // FINAL
@@ -4519,12 +4586,12 @@ async function loadDeadlineSetting() {
 
       var el3 = document.getElementById('setting-final-deadline');
       if (el3) el3.value = dl.final;
-    } else {
-      FINAL_DEADLINE = null;
-      localStorage.removeItem('kpi_final_deadline');
-      var el3 = document.getElementById('setting-final-deadline');
-      if (el3) el3.value = '';
-    }
+    } else {                                          // ← เพิ่ม
+      SELF_DEADLINE = null;                           // ← เพิ่ม
+      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
+      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
+      if (el) el.value = '';                          // ← เพิ่ม
+    }                                                 // ← เพิ่ม
 
   } catch(err) {
 
