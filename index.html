@@ -1451,6 +1451,8 @@ async function loadFromSheets() {
     hideSplash();
     showToast('โหลดข้อมูลไม่สำเร็จ: ' + err.message);
     console.error(err);
+    // ถึงแม้ GAS จะ fail ให้ยัง login ได้ถ้ามีข้อมูลใน USERS
+    GAS_READY = true;
   }
 }
 
