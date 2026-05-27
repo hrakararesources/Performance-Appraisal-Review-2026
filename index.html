@@ -838,7 +838,12 @@ textarea{resize:vertical;min-height:70px;}
 <option>M-Level-B (IC)</option></select>
     </div>
     <div class="form-group"><label>Email (Outlook)</label><input type="email" id="new-emp-email" placeholder="name@akarares.com" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
-    <div class="form-group"><label>ผู้ประเมิน (Supervisor ID)</label><input type="text" id="new-emp-sup" placeholder="เช่น AKR26020001" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
+    <div class="form-group"><label>ผู้ประเมิน S-Level (Supervisor ID)</label><input type="text" id="new-emp-sup" placeholder="เช่น AKR26020001" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
+    <div class="form-group"><label>Final Approver ID</label><input type="text" id="new-emp-final" placeholder="เช่น AKR26010001" style="width:100%;padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-family:inherit;font-size:14px;"/></div>
+    <div class="form-group" style="display:flex;gap:1.5rem;align-items:center;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="new-emp-isfinal" style="width:auto;"> เป็น Final Approver</label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="new-emp-ishr" style="width:auto;"> เป็น HR</label>
+    </div>
   </div>
   <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:1rem;">
     <button class="btn btn-outline" onclick="closeModal('modal-add-emp')">ยกเลิก</button>
@@ -1214,6 +1219,26 @@ let evalStore = {}, inbox = {};
 let currentUser = null, currentSubId = null, selfScores = {}, subScores = {}, currentPage = '';
 let GAS_READY = false;
 
+// SUBORDINATES แยกตาม role เพื่อไม่ให้ S-Level supervisor เห็น Final queue ปน
+var SUBS_SUPERVISOR = {};  // supervisorId → [empId, ...]   (S-Level ใช้)
+var SUBS_FINAL      = {};  // finalId      → [empId, ...]   (Final ใช้)
+
+// Helper: รายชื่อลูกน้องตาม role ของ currentUser
+function getMySubordinates(user) {
+  if (!user) return [];
+  if (user.isFinal) {
+    // Final เห็นเฉพาะคนที่ finalId ชี้มา
+    return (SUBS_FINAL[user.id] || []);
+  } else {
+    // S-Level supervisor เห็นเฉพาะคนที่ supervisorId ชี้มา
+    return (SUBS_SUPERVISOR[user.id] || []);
+  }
+}
+
+// SUBORDINATES (legacy — ยังคงไว้เพื่อ backward compat กับโค้ดบางส่วน)
+// จะถูก rebuild ใน loadFromSheets โดยรวมทั้งสองกลุ่ม
+var SUBORDINATES = {};
+
 // ── Wrap google.script.run เป็น Promise ──────────────────────
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxsSGgfR_QZ1bSiQ_u-RJW64S0iTKTwzAmCkX1dGX-4giPKYfTPtjRSGhTHIS4i2NEx/exec'; // ← วาง Web App URL ที่นี่
 
@@ -1268,14 +1293,22 @@ async function loadFromSheets() {
     evalStore = r.evalStore || {};
     inbox = r.inbox || {};
     SUBORDINATES = {};
+    SUBS_SUPERVISOR = {};
+    SUBS_FINAL = {};
     Object.entries(USERS).forEach(([id, u]) => {
       // S-Level supervisor
       if (u.supervisorId) {
+        if (!SUBS_SUPERVISOR[u.supervisorId]) SUBS_SUPERVISOR[u.supervisorId] = [];
+        if (!SUBS_SUPERVISOR[u.supervisorId].includes(id)) SUBS_SUPERVISOR[u.supervisorId].push(id);
+        // legacy
         if (!SUBORDINATES[u.supervisorId]) SUBORDINATES[u.supervisorId] = [];
         if (!SUBORDINATES[u.supervisorId].includes(id)) SUBORDINATES[u.supervisorId].push(id);
       }
       // Final approver
       if (u.finalId) {
+        if (!SUBS_FINAL[u.finalId]) SUBS_FINAL[u.finalId] = [];
+        if (!SUBS_FINAL[u.finalId].includes(id)) SUBS_FINAL[u.finalId].push(id);
+        // legacy
         if (!SUBORDINATES[u.finalId]) SUBORDINATES[u.finalId] = [];
         if (!SUBORDINATES[u.finalId].includes(id)) SUBORDINATES[u.finalId].push(id);
       }
@@ -1409,10 +1442,15 @@ function tenureBadgeColor(y) {
   return {bg:'#f3e5f5',color:'#6a1b9a'};
 }
 function calcScore(lk,scores){
-  const secs=EVAL_DATA[lk].sections;let total=0;
-  secs.forEach((sec,si)=>{let sum=0,cnt=0;
-    sec.items.forEach((_,ii)=>{if(scores[si]&&scores[si][ii]){sum+=scores[si][ii];cnt++;}});
-    if(cnt>0)total+=(sum/cnt)*(sec.pct/100);});
+  const secs=EVAL_DATA[lk].sections;
+  let total=0, usedPct=0;
+  secs.forEach((sec,si)=>{
+    let sum=0,cnt=0;
+    sec.items.forEach((_,ii)=>{if(scores[si]&&scores[si][ii]!==undefined){sum+=scores[si][ii];cnt++;}});
+    if(cnt>0){ total+=(sum/cnt)*(sec.pct/100); usedPct+=sec.pct; }
+  });
+  // normalize: ถ้าตอบไม่ครบทุก section ให้ scale คะแนนตามสัดส่วนที่ตอบ
+  if(usedPct>0 && usedPct<100) total = total * (100/usedPct);
   return total;
 }
 function totalItems(lk){return EVAL_DATA[lk].sections.reduce((a,s)=>a+s.items.length,0);}
@@ -1437,9 +1475,10 @@ function doLogin(){
   const id=document.getElementById('login-id').value.trim();
   const pass=document.getElementById('login-pass').value.trim();
   const user=USERS[id];
+  if(!user){showToast(currentLang==='th'?'รหัสไม่ถูกต้อง':'Incorrect credentials');return;}
   const userPass=String(user.pass).padStart(5,'0');
   const inputPass=pass.padStart(5,'0');
-  if(!user||userPass!==inputPass){showToast(currentLang==='th'?'รหัสไม่ถูกต้อง':'Incorrect credentials');return;}
+  if(userPass!==inputPass){showToast(currentLang==='th'?'รหัสไม่ถูกต้อง':'Incorrect credentials');return;}
   if(user.inactive){showToast(currentLang==='th'?'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อ HR':'This account is deactivated. Please contact HR');return;}
   currentUser={id,...user};
   document.getElementById('screen-login').classList.add('hidden');
@@ -2243,28 +2282,45 @@ function submitSelfEval(){
 
 // ── EVAL OTHERS ──
 function renderEvalOthers(){
-  const subs=(SUBORDINATES[currentUser.id]||[]).filter(sid=>USERS[sid]&&!USERS[sid].inactive);const container=document.getElementById('subordinate-table');
-  if(!subs.length){container.innerHTML=("<p style=\"color:var(--text-muted);padding:1rem;\">"+(currentLang==='th'?'ไม่มีพนักงานที่ต้องประเมิน':'No staff to evaluate')+"</p>");return;}
-  const rows=subs.map(sid=>{
-    const sub=USERS[sid];const eData=evalStore[sid]||{};const selfDone=!!eData.selfTotal;
-    const myDone=currentUser.isFinal?!!eData.finalTotal:!!eData.sTotal;const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-    return ("<tr>\n      <td>"+(sid)+"</td>\n      <td><b>"+(userName(sub))+"</b></td>\n      <td>"+(sub.dept?sub.dept[currentLang]:'—')+"</td>\n      <td>"+(sub.position?sub.position[currentLang]:'—')+"</td>\n      <td><span class=\"badge badge-blue\">"+(sub.level)+"</span></td>\n      <td>"+((selfDone||isDeadlinePassed())&&(currentUser.isFinal?(eData.sTotal||isSLevelDeadlinePassed()):true)?("<span class=\"badge badge-green\">✓ "+((eData.selfTotal||0).toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">"+(t('wait'))+"</span>"))+"</td>\n      <td><button class=\"btn btn-sm btn-primary\" onclick=\"openSubEval('"+(sid)+"')\" "+((currentUser.isFinal?(!!eData.sTotal||isSLevelLocked()):(selfDone||isSelfLocked()))?'':'disabled')+">"+(myDone?currentLang==='th'?'ดูผล':'View':currentLang==='th'?'ประเมิน':'Evaluate')+"</button>"+(currentUser.isFinal?" <button class=\"btn btn-sm\" style=\"background:#e67e22;color:white;font-size:11px;\" onclick=\"openProposalForm(\x27"+(sid)+"\x27)\">"+(currentLang==='th'?'เสนอปรับ':'Propose')+"</button>":"")+"</td>\n    </tr>");
-
-  // Inject View buttons for Final approvers
-  if (currentUser.isFinal) {
-    subs.forEach(function(sid) {
-      var cell = container.querySelector('tr[data-sid="'+sid+'"] td:last-child');
-      if (!cell) return;
-      var btn = document.createElement('button');
-      btn.className = 'btn btn-sm btn-outline';
-      btn.style.cssText = 'font-size:11px;margin-left:4px;';
-      btn.textContent = currentLang==='th'?'View':'View';
-      btn.setAttribute('data-viewprop', sid);
-      cell.appendChild(btn);
-    });
+  const subs = getMySubordinates(currentUser).filter(sid => USERS[sid] && !USERS[sid].inactive);
+  const container = document.getElementById('subordinate-table');
+  if (!subs.length) {
+    container.innerHTML = ("<p style=\"color:var(--text-muted);padding:1rem;\">" + (currentLang==='th'?'ไม่มีพนักงานที่ต้องประเมิน':'No staff to evaluate') + "</p>");
+    return;
   }
+  const rows = subs.map(sid => {
+    const sub   = USERS[sid];
+    const eData = evalStore[sid] || {};
+    const selfDone = !!eData.selfTotal;
+    const myDone   = currentUser.isFinal ? !!eData.finalTotal : !!eData.sTotal;
+    const evalBtn  = currentUser.isFinal
+      ? (!!eData.sTotal || isSLevelLocked())
+      : (selfDone || isSelfLocked());
+    const proposeBtn = currentUser.isFinal
+      ? `<button class="btn btn-sm" style="background:#e67e22;color:white;font-size:11px;margin-left:4px;" onclick="openProposalForm('${sid}')">${currentLang==='th'?'เสนอปรับ':'Propose'}</button>`
+      : '';
+    const selfBadge = (selfDone || isDeadlinePassed()) && (currentUser.isFinal ? (eData.sTotal || isSLevelDeadlinePassed()) : true)
+      ? `<span class="badge badge-green">✓ ${(eData.selfTotal||0).toFixed(2)}</span>`
+      : `<span class="badge badge-gray">${t('wait')}</span>`;
+    return `<tr>
+      <td>${sid}</td>
+      <td><b>${userName(sub)}</b></td>
+      <td>${sub.dept ? sub.dept[currentLang] : '—'}</td>
+      <td>${sub.position ? sub.position[currentLang] : '—'}</td>
+      <td><span class="badge badge-blue">${sub.level}</span></td>
+      <td>${selfBadge}</td>
+      <td>
+        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}')" ${evalBtn?'':'disabled'}>
+          ${myDone ? (currentLang==='th'?'ดูผล':'View') : (currentLang==='th'?'ประเมิน':'Evaluate')}
+        </button>
+        ${proposeBtn}
+      </td>
+    </tr>`;
   });
-  container.innerHTML=("<table><thead><tr><th>"+(t('th-code'))+"</th><th>"+(t('th-name'))+"</th><th>"+(t('th-dept'))+"</th><th>"+(t('th-pos'))+"</th><th>Level</th><th>Self</th><th></th></tr></thead><tbody>"+(rows.join(''))+"</tbody></table>");
+  container.innerHTML = `<table><thead><tr>
+    <th>${t('th-code')}</th><th>${t('th-name')}</th><th>${t('th-dept')}</th>
+    <th>${t('th-pos')}</th><th>Level</th><th>Self</th><th></th>
+  </tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
 function openSubEval(subId, readOnly){
   window._subReadOnly = (readOnly === true || readOnly === 'true');
@@ -2342,6 +2398,7 @@ function submitSubEval(){
   if(currentUser.isFinal){
     evalStore[currentSubId].finalScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].finalTotal=score;
+    if(commentText) evalStore[currentSubId].finalComment=commentText;
     const chk=document.getElementById('chk-special');
     if(chk&&chk.checked){evalStore[currentSubId].specialAdj=true;evalStore[currentSubId].specialReason=document.getElementById('special-reason').value;}
     Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
@@ -2350,8 +2407,7 @@ function submitSubEval(){
   } else {
     evalStore[currentSubId].sScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].sTotal=score;
-    if(currentUser.isFinal) { if(commentText) evalStore[currentSubId].finalComment=commentText; }
-    else { if(commentText) evalStore[currentSubId].sComment=commentText; }
+    if(commentText) evalStore[currentSubId].sComment=commentText;
     const fid=USERS[currentSubId].finalId;
     if(fid)addInboxMsg(fid,{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:(""+(t('final-step'))+" – "+(userName(sub))+""),body:("S-Level "+(t('score'))+": "+(score.toFixed(2))+""),link:'page-eval-others'});
     Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
@@ -2462,12 +2518,41 @@ function addEmployee(){
   const pos=document.getElementById('new-emp-pos').value.trim();
   const level=document.getElementById('new-emp-level').value;
   const sup=document.getElementById('new-emp-sup').value.trim();
+  const finalId=document.getElementById('new-emp-final').value.trim();
+  const isFinal=document.getElementById('new-emp-isfinal').checked;
+  const isHR=document.getElementById('new-emp-ishr').checked;
   if(!id||!nameTh||!pass){showToast(t('fill-all'));return;}
-  const startD = document.getElementById('new-emp-start').value;
-  var empEmail = document.getElementById('new-emp-email') ? document.getElementById('new-emp-email').value.trim() : '';
-  USERS[id]={name:{th:nameTh,en:nameEn||nameTh},level,pass,dept:{th:dept,en:dept},position:{th:pos,en:pos},startDate:startD||null,supervisorId:sup||null,finalId:null,isFinal:false,email:empEmail||null};
-  if(sup&&SUBORDINATES[sup])SUBORDINATES[sup].push(id);else if(sup)SUBORDINATES[sup]=[id];
-  closeModal('modal-add-emp');showToast((""+(t('add-emp-done'))+": "+(nameTh)+""),'success');
+  if(USERS[id]){showToast(currentLang==='th'?'รหัสพนักงานนี้มีอยู่แล้ว':'Employee ID already exists');return;}
+  const startD=document.getElementById('new-emp-start').value;
+  var empEmail=document.getElementById('new-emp-email')?document.getElementById('new-emp-email').value.trim():'';
+  USERS[id]={
+    name:{th:nameTh,en:nameEn||nameTh},
+    level, pass,
+    dept:{th:dept,en:dept},
+    position:{th:pos,en:pos},
+    startDate:startD||null,
+    supervisorId:sup||null,
+    finalId:finalId||null,
+    isFinal, isHR,
+    inactive:false,
+    email:empEmail||null
+  };
+  // Sync SUBS_SUPERVISOR
+  if(sup){
+    if(!SUBS_SUPERVISOR[sup])SUBS_SUPERVISOR[sup]=[];
+    if(!SUBS_SUPERVISOR[sup].includes(id))SUBS_SUPERVISOR[sup].push(id);
+    if(!SUBORDINATES[sup])SUBORDINATES[sup]=[];
+    if(!SUBORDINATES[sup].includes(id))SUBORDINATES[sup].push(id);
+  }
+  // Sync SUBS_FINAL
+  if(finalId){
+    if(!SUBS_FINAL[finalId])SUBS_FINAL[finalId]=[];
+    if(!SUBS_FINAL[finalId].includes(id))SUBS_FINAL[finalId].push(id);
+    if(!SUBORDINATES[finalId])SUBORDINATES[finalId]=[];
+    if(!SUBORDINATES[finalId].includes(id))SUBORDINATES[finalId].push(id);
+  }
+  closeModal('modal-add-emp');
+  showToast((""+(t('add-emp-done'))+": "+(nameTh)+""),'success');
   syncUser(id);
   renderHrEmpList();renderHrDashboard();
 }
@@ -3538,6 +3623,8 @@ function confirmImport() {
     const o = r.obj;
     importPreviewData_ids.push(o.emp_id);
     const isFinal = (o.is_final||'').toLowerCase() === 'true';
+    const isHR    = (o.is_hr||'').toLowerCase() === 'true';
+    const inactive= (o.inactive||'').toLowerCase() === 'true';
     const userData = {
       name:       { th: o.name_th, en: o.name_en || o.name_th },
       level:      o.level,
@@ -3549,6 +3636,8 @@ function confirmImport() {
       supervisorId: o.supervisor_id || null,
       finalId:    o.final_id || null,
       isFinal:    isFinal,
+      isHR:       isHR,
+      inactive:   inactive,
     };
 
     if (r.isDuplicate) {
@@ -3560,11 +3649,23 @@ function confirmImport() {
       added++;
     }
 
-    // Wire SUBORDINATES
+    // Wire SUBS_SUPERVISOR (S-Level)
     if (o.supervisor_id) {
+      if (!SUBS_SUPERVISOR[o.supervisor_id]) SUBS_SUPERVISOR[o.supervisor_id] = [];
+      if (!SUBS_SUPERVISOR[o.supervisor_id].includes(o.emp_id))
+        SUBS_SUPERVISOR[o.supervisor_id].push(o.emp_id);
       if (!SUBORDINATES[o.supervisor_id]) SUBORDINATES[o.supervisor_id] = [];
       if (!SUBORDINATES[o.supervisor_id].includes(o.emp_id))
         SUBORDINATES[o.supervisor_id].push(o.emp_id);
+    }
+    // Wire SUBS_FINAL
+    if (o.final_id) {
+      if (!SUBS_FINAL[o.final_id]) SUBS_FINAL[o.final_id] = [];
+      if (!SUBS_FINAL[o.final_id].includes(o.emp_id))
+        SUBS_FINAL[o.final_id].push(o.emp_id);
+      if (!SUBORDINATES[o.final_id]) SUBORDINATES[o.final_id] = [];
+      if (!SUBORDINATES[o.final_id].includes(o.emp_id))
+        SUBORDINATES[o.final_id].push(o.emp_id);
     }
   });
 
@@ -4123,8 +4224,6 @@ function saveSettings() {
   updateSLevelDeadlineStatus();
   showToast(currentLang === 'th' ? 'บันทึกการตั้งค่าเรียบร้อย' : 'Settings saved', 'success');
   if (currentPage === 'page-eval-others') renderEvalOthers();
-  if (currentPage === 'page-self-eval') renderSelfEvalPage();
-  if (currentPage === 'page-hr-employees') renderHrEmployees();
 }
 
 function loadDeadlineSetting() {
