@@ -1062,6 +1062,7 @@ function setLang(lang) {
   if(currentPage === 'page-score-desc-editor') initDescEditor();
   if(currentPage === 'page-self-eval') renderSelfEvalPage();
   if(currentPage === 'page-my-result') renderMyResult();
+  if(currentPage === 'page-hr-settings') refreshDeadlineInputs();
   if(currentPage === 'page-eval-others') renderEvalOthers();
   if(currentPage === 'page-hr-proposals') loadProposals();
   if(currentPage === 'page-final-report') renderFinalReport();
@@ -1662,6 +1663,7 @@ function showPage(pid){
   currentPage=pid;
   if(pid==='page-inbox')renderInbox();
   if(pid==='page-my-result')renderMyResult();
+  if(pid==='page-hr-settings') refreshDeadlineInputs();
   if(pid==='page-eval-others')renderEvalOthers();
   if(pid==='page-hr-dashboard')renderHrDashboard();
   if(pid==='page-hr-employees')renderHrEmpList();
@@ -4621,6 +4623,17 @@ function saveSettings() {
   if (currentPage === 'page-eval-others') renderEvalOthers();
 }
 
+
+// อัปเดต input ในหน้า Settings ด้วยค่า deadline ปัจจุบัน
+function refreshDeadlineInputs() {
+  var s = document.getElementById('setting-self-deadline');
+  var sl = document.getElementById('setting-slevel-deadline');
+  var f = document.getElementById('setting-final-deadline');
+  if (s) s.value = SELF_DEADLINE ? SELF_DEADLINE.toISOString().substring(0,10) : '';
+  if (sl) sl.value = SLEVEL_DEADLINE ? SLEVEL_DEADLINE.toISOString().substring(0,10) : '';
+  if (f) f.value = FINAL_DEADLINE ? FINAL_DEADLINE.toISOString().substring(0,10) : '';
+}
+
 async function loadDeadlineSetting() {
 
   try {
@@ -4653,13 +4666,12 @@ async function loadDeadlineSetting() {
 
       var el2 = document.getElementById('setting-slevel-deadline');
       if (el2) el2.value = dl.slevel;
-       } else {                                          // ← เพิ่ม
-      SELF_DEADLINE = null;                           // ← เพิ่ม
-      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
-      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
-      if (el) el.value = '';                          // ← เพิ่ม
-    }                                                 // ← เพิ่ม
-    
+    } else {
+      SLEVEL_DEADLINE = null;
+      localStorage.removeItem('kpi_slevel_deadline');
+      var el2 = document.getElementById('setting-slevel-deadline');
+      if (el2) el2.value = '';
+    }
 
     // FINAL
     if (dl && dl.final) {
@@ -4670,12 +4682,12 @@ async function loadDeadlineSetting() {
 
       var el3 = document.getElementById('setting-final-deadline');
       if (el3) el3.value = dl.final;
-    } else {                                          // ← เพิ่ม
-      SELF_DEADLINE = null;                           // ← เพิ่ม
-      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
-      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
-      if (el) el.value = '';                          // ← เพิ่ม
-    }                                                 // ← เพิ่ม
+    } else {
+      FINAL_DEADLINE = null;
+      localStorage.removeItem('kpi_final_deadline');
+      var el3 = document.getElementById('setting-final-deadline');
+      if (el3) el3.value = '';
+    }
 
   } catch(err) {
 
