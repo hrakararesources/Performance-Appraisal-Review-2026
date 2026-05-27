@@ -814,15 +814,6 @@ textarea{resize:vertical;min-height:70px;}
           <button class="btn btn-outline" onclick="sendBroadcastEmail('final')" id="t-send-final-email">ส่ง Email แจ้งเตือน Final Evaluator</button>
         </div>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">📢 ประกาศผลการประเมิน</div></div>
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:1rem;">พนักงานจะเห็นคะแนน Final/S-Level และ Grade ใน "ผลการประเมินของฉัน" และหน้าหลัก เมื่อ HR กดส่งผลแล้วเท่านั้น</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button class="btn btn-primary" onclick="releaseAllResults()" style="background:#27ae60;border-color:#27ae60;">
-            📢 ส่งผลการประเมินให้พนักงานทุกคน
-          </button>
-        </div>
-      </div>
     </div>
 
   </main>
@@ -1581,7 +1572,13 @@ function updateNotifBadges(){
 
 // ── AUTH ──
 function doLogin(){
-  if(!GAS_READY){showToast(currentLang==='th'?'กำลังโหลดข้อมูล กรุณารอสักครู่…':'Loading data, please wait…');return;}
+  if(!GAS_READY){
+    showToast(currentLang==='th'?'กำลังโหลดข้อมูล กรุณารอสักครู่…':'Loading data, please wait…');
+    var _waitLogin = setInterval(function(){
+      if(GAS_READY){ clearInterval(_waitLogin); doLogin(); }
+    }, 500);
+    return;
+  }
   const id=document.getElementById('login-id').value.trim();
   const pass=document.getElementById('login-pass').value.trim();
   const user=USERS[id];
@@ -1690,7 +1687,7 @@ function renderHome(){
   const stats=document.getElementById('home-stats');
   const grade=eData.selfTotal?getGrade(eData.selfTotal):null;
   const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-  stats.innerHTML=("\n    <div class=\"stat-card accent\"><div class=\"label\">"+(t('level'))+"</div><div class=\"value\" style=\"font-size:18px;\">"+(u.level)+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid #7f8c8d;\"><div class=\"label\">"+(t('dept'))+"</div><div class=\"value\" style=\"font-size:16px;\">"+(u.dept?u.dept[currentLang]:'—')+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid var(--accent);\"><div class=\"label\">"+(currentLang==='th'?'อายุงาน':'Tenure')+"</div><div class=\"value\" style=\"font-size:20px;\">"+(u.startDate?tenureLabel(u.startDate):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(u.startDate?'เริ่ม '+new Date(u.startDate).toLocaleDateString(currentLang==='th'?'th-TH':'en-GB',{day:'numeric',month:'short',year:'numeric'}):'—')+"</div></div>\n    <div class=\"stat-card primary\"><div class=\"label\">Self "+(t('score'))+"</div><div class=\"value\">"+(eData.selfTotal?eData.selfTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(grade?grade.letter+' – '+grade.label:'—')+"</div></div>\n    "+((!currentUser.isHR && !eData.resultReleased) ? "<div class=\"stat-card\" style=\"border-left:4px solid #95a5a6;\"><div class=\"label\">Final "+(t('score'))+"</div><div class=\"value\" style=\"font-size:14px;color:var(--text-muted);\">"+( currentLang==='th'?'รอประกาศผล':'Pending Release')+"</div></div>" : "<div class=\"stat-card success\"><div class=\"label\">Final "+(t('score'))+"</div><div class=\"value\">"+(eData.finalTotal?eData.finalTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(fg?fg.letter+' – '+fg.label:'—')+"</div></div>")+\"\n  ");
+  stats.innerHTML=("\n    <div class=\"stat-card accent\"><div class=\"label\">"+(t('level'))+"</div><div class=\"value\" style=\"font-size:18px;\">"+(u.level)+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid #7f8c8d;\"><div class=\"label\">"+(t('dept'))+"</div><div class=\"value\" style=\"font-size:16px;\">"+(u.dept?u.dept[currentLang]:'—')+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid var(--accent);\"><div class=\"label\">"+(currentLang==='th'?'อายุงาน':'Tenure')+"</div><div class=\"value\" style=\"font-size:20px;\">"+(u.startDate?tenureLabel(u.startDate):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(u.startDate?'เริ่ม '+new Date(u.startDate).toLocaleDateString(currentLang==='th'?'th-TH':'en-GB',{day:'numeric',month:'short',year:'numeric'}):'—')+"</div></div>\n    <div class=\"stat-card primary\"><div class=\"label\">Self "+(t('score'))+"</div><div class=\"value\">"+(eData.selfTotal?eData.selfTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(grade?grade.letter+' – '+grade.label:'—')+"</div></div>\n    <div class=\"stat-card success\"><div class=\"label\">Final "+(t('score'))+"</div><div class=\"value\">"+(eData.finalTotal?eData.finalTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(fg?fg.letter+' – '+fg.label:'—')+"</div></div>\n  ");
   const tl=document.getElementById('eval-timeline');
   const hasSelf=!!eData.selfTotal,hasSEval=!!eData.sTotal,hasFinal=!!eData.finalTotal;
   if(tl) tl.innerHTML=("\n    <div class=\"tl-item\"><div class=\"tl-dot done\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('hr-open-round'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(t('done'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSelf?'done':'active')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('self-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSelf?t('done')+' – '+eData.selfTotal.toFixed(2):t('wait'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSEval?'done':hasSelf?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('s-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSEval?t('done'):t('wait-eval'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasFinal?'done':hasSEval?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('final-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasFinal?t('done')+' – '+t('grade')+' '+getGrade(eData.finalTotal).letter:t('wait'))+"</div></div></div>\n  ");
@@ -2604,18 +2601,16 @@ function renderInbox(){
 function renderMyResult(){
   const eData=evalStore[currentUser.id]||{};const container=document.getElementById('my-result-content');
   if(!eData.selfTotal){container.innerHTML=("<div class=\"card\"><p style=\"color:var(--text-muted);\">"+(t('no-data'))+"</p></div>");return;}
-  // ซ่อน Final/S-Level score ถ้า HR ยังไม่ประกาศผล (เฉพาะพนักงานทั่วไป ไม่ใช่ HR)
-  const canSeeResult = currentUser.isHR || !!eData.resultReleased;
-  const sg=getGrade(eData.selfTotal);const fg=(canSeeResult && eData.finalTotal)?getGrade(eData.finalTotal):null;
+  const sg=getGrade(eData.selfTotal);const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
   const ld=EVAL_DATA[currentUser.level];
-  container.innerHTML=("\n    <div class=\"card\">\n      <div class=\"card-header\">\n        <div class=\"card-title\">"+(t('my-results'))+" – "+(userName(currentUser))+"</div>\n        <span class=\"badge badge-blue\">"+(currentUser.level)+"</span>\n      </div>\n      <div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;\">\n        <span class=\"badge badge-gray\">"+(currentUser.dept?currentUser.dept[currentLang]:'—')+"</span>\n        <span class=\"badge badge-gray\">"+(currentUser.position?currentUser.position[currentLang]:'—')+"</span>\n        "+(currentUser.startDate?(()=>{const y=calcTenure(currentUser.startDate);const {bg,color}=tenureBadgeColor(y);return ("<span class=\"badge\" style=\"background:"+(bg)+";color:"+(color)+";\">"+(tenureLabel(currentUser.startDate))+"</span>");})():'')+"\n        "+(eData.specialAdj?("<span class=\"badge badge-amber\">★ "+(currentLang==='th'?'ปรับพิเศษ':'Special Adj.')+"</span>"):'')+"\n      </div>\n      <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;\">\n        <div style=\"text-align:center;padding:1rem;background:"+(sg.bg)+";border-radius:var(--radius);\">\n          <div style=\"width:56px;height:56px;border-radius:50%;background:"+(sg.bg)+";color:"+(sg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(sg.letter)+"</div>\n          <div style=\"font-weight:700;color:"+(sg.color)+";\">"+(sg.label)+"</div>\n          <div style=\"font-size:13px;color:"+(sg.color)+";opacity:.8;\">Self: "+((eData.selfTotal||0).toFixed(2))+"</div>\n        </div>\n        <div style=\"text-align:center;padding:1rem;background:"+(fg?fg.bg:'var(--bg)')+";border-radius:var(--radius);\">\n          "+((!canSeeResult)?("<div style=\"padding-top:.5rem;\"><div style=\"font-size:28px;\">⏳</div><div style=\"font-size:13px;color:var(--text-muted);margin-top:4px;\">"+(currentLang==='th'?'รอประกาศผล':'Pending Release')+"</div></div>"):(fg?("<div style=\"width:56px;height:56px;border-radius:50%;background:"+(fg.bg)+";color:"+(fg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(fg.letter)+"</div><div style=\"font-weight:700;color:"+(fg.color)+";\">"+(fg.label)+"</div><div style=\"font-size:13px;color:"+(fg.color)+";opacity:.8;\">Final: "+(eData.finalTotal.toFixed(2))+"</div>"):("<div style=\"padding-top:1rem;color:var(--text-muted);\">"+(t('wait-eval'))+"</div>")))+"\n        </div>\n      </div>\n      <hr class=\"divider\">\n      <div class=\"card-title\" style=\"margin-bottom:.75rem;font-size:14px;\">"+(currentLang==='th'?'คะแนนแต่ละด้าน':'Score Breakdown')+"</div>\n      "+(ld.sections.map((sec,si)=>{
+  container.innerHTML=("\n    <div class=\"card\">\n      <div class=\"card-header\">\n        <div class=\"card-title\">"+(t('my-results'))+" – "+(userName(currentUser))+"</div>\n        <span class=\"badge badge-blue\">"+(currentUser.level)+"</span>\n      </div>\n      <div style=\"display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1rem;\">\n        <span class=\"badge badge-gray\">"+(currentUser.dept?currentUser.dept[currentLang]:'—')+"</span>\n        <span class=\"badge badge-gray\">"+(currentUser.position?currentUser.position[currentLang]:'—')+"</span>\n        "+(currentUser.startDate?(()=>{const y=calcTenure(currentUser.startDate);const {bg,color}=tenureBadgeColor(y);return ("<span class=\"badge\" style=\"background:"+(bg)+";color:"+(color)+";\">"+(tenureLabel(currentUser.startDate))+"</span>");})():'')+"\n        "+(eData.specialAdj?("<span class=\"badge badge-amber\">★ "+(currentLang==='th'?'ปรับพิเศษ':'Special Adj.')+"</span>"):'')+"\n      </div>\n      <div style=\"display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;\">\n        <div style=\"text-align:center;padding:1rem;background:"+(sg.bg)+";border-radius:var(--radius);\">\n          <div style=\"width:56px;height:56px;border-radius:50%;background:"+(sg.bg)+";color:"+(sg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(sg.letter)+"</div>\n          <div style=\"font-weight:700;color:"+(sg.color)+";\">"+(sg.label)+"</div>\n          <div style=\"font-size:13px;color:"+(sg.color)+";opacity:.8;\">Self: "+((eData.selfTotal||0).toFixed(2))+"</div>\n        </div>\n        <div style=\"text-align:center;padding:1rem;background:"+(fg?fg.bg:'var(--bg)')+";border-radius:var(--radius);\">\n          "+(fg?("<div style=\"width:56px;height:56px;border-radius:50%;background:"+(fg.bg)+";color:"+(fg.color)+";display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;margin:0 auto 6px;\">"+(fg.letter)+"</div><div style=\"font-weight:700;color:"+(fg.color)+";\">"+(fg.label)+"</div><div style=\"font-size:13px;color:"+(fg.color)+";opacity:.8;\">Final: "+(eData.finalTotal.toFixed(2))+"</div>"):("<div style=\"padding-top:1rem;color:var(--text-muted);\">"+(t('wait-eval'))+"</div>"))+"\n        </div>\n      </div>\n      <hr class=\"divider\">\n      <div class=\"card-title\" style=\"margin-bottom:.75rem;font-size:14px;\">"+(currentLang==='th'?'คะแนนแต่ละด้าน':'Score Breakdown')+"</div>\n      "+(ld.sections.map((sec,si)=>{
         const scores=eData.selfScores||{};let sum=0,cnt=0;
         sec.items.forEach((_,ii)=>{if(scores[si]&&scores[si][ii]){sum+=scores[si][ii];cnt++;}});
         const avg=cnt>0?(sum/cnt):0;
         return ("<div class=\"section-score-row\"><div class=\"lbl\">"+(secLabel(sec))+" ("+(sec.pct)+"%)</div><div class=\"bar\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(avg/5*100)+"%;\"></div></div></div><div style=\"width:36px;text-align:right;font-weight:600;color:var(--primary);\">"+(avg>0?avg.toFixed(2):'—')+"</div></div>");
       }).join(''))+"</div>");
-  // Show Final Approver comment if exists (only when released)
-  if (canSeeResult && eData.finalComment) {
+  // Show Final Approver comment if exists
+  if (eData.finalComment) {
     var commentCard = document.createElement('div');
     commentCard.className = 'card';
     commentCard.style.marginTop = '1rem';
@@ -2639,7 +2634,7 @@ function renderHrDashboard(){
   gs.innerHTML=GRADES.map(g=>("<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\"><div style=\"width:28px;height:28px;border-radius:50%;background:"+(g.bg)+";color:"+(g.color)+";display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;\">"+(g.letter)+"</div><div style=\"flex:1;\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(gc[g.letter]/mx*100)+"%;background:"+(g.bar)+";\"></div></div></div><div style=\"font-size:13px;font-weight:600;min-width:20px;\">"+(gc[g.letter])+"</div></div>")).join('');
   const tbody=document.getElementById('hr-emp-table');
   tbody.innerHTML=empIds.map(id=>{const u=USERS[id];const e=evalStore[id]||{};const fg=e.finalTotal?getGrade(e.finalTotal):null;
-    var isReleased = e.resultReleased ? true : false;return ("<tr><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td>"+(userName(u))+"</td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td><span class=\"badge badge-blue\">"+(u.level)+"</span></td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td>"+(e.selfTotal?("<span class=\"badge badge-green\">"+(e.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.sTotal?("<span class=\"badge badge-teal\">"+(e.sTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.finalTotal?("<span class=\"badge badge-green\">"+(e.finalTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(fg?("<span class=\"badge\" style=\"background:"+(fg.bg)+";color:"+(fg.color)+";\">"+(fg.letter)+"</span>"):'—')+"</td><td><button class=\"btn btn-sm\" style=\"font-size:11px;padding:3px 8px;background:"+(isReleased?'#27ae60':'#e67e22')+";color:#fff;border:none;border-radius:4px;cursor:pointer;\" onclick=\"toggleReleaseResult('"+id+"',"+(!isReleased)+")\">"+(isReleased?(currentLang==='th'?'ส่งแล้ว ✓':'Released ✓'):(currentLang==='th'?'ส่งผล':'Release'))+"</button></td></tr>");
+    return ("<tr><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td>"+(userName(u))+"</td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td><span class=\"badge badge-blue\">"+(u.level)+"</span></td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td>"+(e.selfTotal?("<span class=\"badge badge-green\">"+(e.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.sTotal?("<span class=\"badge badge-teal\">"+(e.sTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.finalTotal?("<span class=\"badge badge-green\">"+(e.finalTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(fg?("<span class=\"badge\" style=\"background:"+(fg.bg)+";color:"+(fg.color)+";\">"+(fg.letter)+"</span>"):'—')+"</td></tr>");
   }).join('');
 }
 function hrCloseRound(){
@@ -4421,47 +4416,6 @@ function gasPostScoreDescByLevel(data) {
 }
 
 // ── SETTINGS & DEADLINE ──────────────────────────────────────
-
-// ── RELEASE RESULTS ─────────────────────────────────────────────
-async function releaseAllResults() {
-  if (!currentUser || !currentUser.isHR) return;
-  var msg = currentLang === 'th'
-    ? 'ยืนยันส่งผลการประเมินให้พนักงานทุกคน?\nพนักงานจะเห็นคะแนน Final/S-Level และ Grade ทันที'
-    : 'Release results to ALL employees?\nThey will see Final/S-Level scores and Grade immediately.';
-  if (!confirm(msg)) return;
-  showToast(currentLang === 'th' ? 'กำลังส่งผล...' : 'Releasing...');
-  try {
-    var res = await gasRun('releaseResults', {});
-    if (res && res.ok) {
-      Object.keys(evalStore).forEach(function(id) { evalStore[id].resultReleased = true; });
-      showToast(currentLang === 'th'
-        ? '\u2705 ส่งผลแล้ว ' + (res.released || 0) + ' คน'
-        : '\u2705 Released to ' + (res.released || 0) + ' employees');
-      if (currentPage === 'page-hr-report') renderHrReport();
-    } else {
-      showToast('\u274C Error: ' + (res && res.error ? res.error : 'Unknown'));
-    }
-  } catch(e) { showToast('\u274C ' + e.message); }
-}
-
-async function toggleReleaseResult(empId, release) {
-  if (!currentUser || !currentUser.isHR) return;
-  try {
-    var res = await gasRun('releaseResultSingle', { emp_id: empId, release: release });
-    if (res && res.ok) {
-      if (!evalStore[empId]) evalStore[empId] = {};
-      evalStore[empId].resultReleased = release;
-      showToast(currentLang === 'th'
-        ? (release ? '\u2705 ส่งผลแล้ว' : '\u21A9\uFE0F ยกเลิกการส่งผล')
-        : (release ? '\u2705 Result released' : '\u21A9\uFE0F Result recalled'));
-      if (currentPage === 'page-hr-report') renderHrReport();
-    } else {
-      showToast('\u274C Error: ' + (res && res.error ? res.error : 'Unknown'));
-    }
-  } catch(e) { showToast('\u274C ' + e.message); }
-}
-// ──────────────────────────────────────────────────────────────────
-
 var SELF_DEADLINE = null;
 var SLEVEL_DEADLINE = null;
 var FINAL_DEADLINE = null;
