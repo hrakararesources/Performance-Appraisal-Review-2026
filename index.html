@@ -4502,12 +4502,12 @@ async function loadDeadlineSetting() {
 
       var el2 = document.getElementById('setting-slevel-deadline');
       if (el2) el2.value = dl.slevel;
-       } else {                                          // ← เพิ่ม
-      SELF_DEADLINE = null;                           // ← เพิ่ม
-      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
-      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
-      if (el) el.value = '';                          // ← เพิ่ม
-    }                                                 // ← เพิ่ม
+    } else {
+      SLEVEL_DEADLINE = null;
+      localStorage.removeItem('kpi_slevel_deadline');
+      var el2 = document.getElementById('setting-slevel-deadline');
+      if (el2) el2.value = '';
+    }
     
 
     // FINAL
@@ -4519,12 +4519,12 @@ async function loadDeadlineSetting() {
 
       var el3 = document.getElementById('setting-final-deadline');
       if (el3) el3.value = dl.final;
-    } else {                                          // ← เพิ่ม
-      SELF_DEADLINE = null;                           // ← เพิ่ม
-      localStorage.removeItem('kpi_self_deadline');   // ← เพิ่ม
-      var el = document.getElementById('setting-self-deadline'); // ← เพิ่ม
-      if (el) el.value = '';                          // ← เพิ่ม
-    }                                                 // ← เพิ่ม
+    } else {
+      FINAL_DEADLINE = null;
+      localStorage.removeItem('kpi_final_deadline');
+      var el3 = document.getElementById('setting-final-deadline');
+      if (el3) el3.value = '';
+    }
 
   } catch(err) {
 
