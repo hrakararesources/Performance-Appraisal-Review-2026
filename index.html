@@ -1574,6 +1574,7 @@ function updateNotifBadges(){
 
 // ── AUTH ──
 function doLogin(){
+  if(!GAS_READY){showToast(currentLang==='th'?'กำลังโหลดข้อมูล กรุณารอสักครู่…':'Loading data, please wait…');return;}
   const id=document.getElementById('login-id').value.trim();
   const pass=document.getElementById('login-pass').value.trim();
   const user=USERS[id];
@@ -2332,6 +2333,8 @@ function secLabel(sec){return sec.name?sec.name[currentLang]||sec.name.th:'';}
 
 function buildEvalSections(containerId,lk,scoresObj,prefix){
   const container=document.getElementById(containerId);container.innerHTML='';
+  const isLocked = prefix==='self' ? isSelfLocked()
+    : (currentUser && currentUser.isFinal ? isFinalLocked() : isSLevelLocked());
   EVAL_DATA[lk].sections.forEach((sec,si)=>{
     if(!scoresObj[si])scoresObj[si]={};
     const secEl=document.createElement('div');secEl.className='eval-section';
@@ -2339,14 +2342,38 @@ function buildEvalSections(containerId,lk,scoresObj,prefix){
     sec.items.forEach((item,ii)=>{
       const cur=scoresObj[si][ii];
       const itemEl=document.createElement('div');itemEl.className='eval-item';
-      itemEl.innerHTML=("\n        <div class=\"eval-item-label\">"+(ii+1)+". "+(item[currentLang]||item.th)+"</div>\n        <div class=\"score-row-btns\">\n          "+([1,2,3,4,5].map(n=>("<button class=\"score-btn s"+(n)+""+(cur===n?' sel':'')+"\" id=\"btn-"+(prefix)+"-"+(si)+"-"+(ii)+"-"+(n)+"\" onclick=\"selectScoreItem('"+(prefix)+"',"+(si)+","+(ii)+","+(n)+",'"+(lk)+"')\">"+(n)+"</button>")).join(''))+"\n          <span style=\"font-size:12px;color:var(--text-muted);margin-left:6px;\" id=\"slabel-"+(prefix)+"-"+(si)+"-"+(ii)+"\">"+(cur?GRADES[5-cur]?'':GRADES.find(()=>true)?'':'':'')+"</span>\n        </div>\n        <div class=\"score-desc-box"+(cur?' vis':'')+"\" id=\"desc-"+(prefix)+"-"+(si)+"-"+(ii)+"\">"+(cur?getDesc(lk,si,ii,cur):'')+"</div>");
+      const btnHtml=[1,2,3,4,5].map(n=>{
+        const sel=cur===n?' sel':'';
+        const dis=isLocked?' disabled':'';
+        return ("<button class=\"score-btn s"+(n)+""+(sel)+"\" id=\"btn-"+(prefix)+"-"+(si)+"-"+(ii)+"-"+(n)+"\" onclick=\"selectScoreItem('"+(prefix)+"',"+(si)+","+(ii)+","+(n)+",'"+(lk)+"')\""+(dis)+">"+(n)+"</button>");
+      }).join('');
+      itemEl.innerHTML=("\n        <div class=\"eval-item-label\">"+(ii+1)+". "+(item[currentLang]||item.th)+"</div>\n        <div class=\"score-row-btns\">\n          "+btnHtml+"\n          <span style=\"font-size:12px;color:var(--text-muted);margin-left:6px;\" id=\"slabel-"+(prefix)+"-"+(si)+"-"+(ii)+"\"></span>\n        </div>\n        <div class=\"score-desc-box"+(cur?' vis':'')+"\" id=\"desc-"+(prefix)+"-"+(si)+"-"+(ii)+"\">"+(cur?getDesc(lk,si,ii,cur):'')+"</div>");
       secEl.appendChild(itemEl);
     });
     container.appendChild(secEl);
   });
+  // แสดง banner แจ้งเตือนถ้าล็อก
+  if(isLocked){
+    var banner=document.createElement('div');
+    banner.style.cssText='background:#fdecea;border:1px solid #f5c6cb;border-radius:8px;padding:10px 14px;margin-bottom:12px;color:#c0392b;font-size:13px;font-weight:600;';
+    banner.textContent='🔒 '+(currentLang==='th'?'Deadline ผ่านไปแล้ว — ไม่สามารถแก้ไขคะแนนได้':'Deadline passed — scores are locked');
+    container.insertBefore(banner,container.firstChild);
+  }
 }
 
 function selectScoreItem(prefix,si,ii,score,lk){
+  // Block scoring when locked
+  if(prefix==='self' && isSelfLocked()){
+    showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
+    return;
+  }
+  if(prefix==='sub'){
+    var locked = currentUser && currentUser.isFinal ? isFinalLocked() : isSLevelLocked();
+    if(locked){
+      showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
+      return;
+    }
+  }
   setUnsaved(true);
   const scoresObj=prefix==='self'?selfScores:subScores;
   if(!scoresObj[si])scoresObj[si]={};scoresObj[si][ii]=score;
@@ -2591,11 +2618,26 @@ function hrCloseRound(){
 // ── HR EMPLOYEES ──
 function renderHrEmpList(){
   const fl=document.getElementById('filter-level').value;
-  const fd=document.getElementById('filter-dept').value;
-  const allDepts=[...new Set(Object.values(USERS).filter(u=>!u.isHR).map(u=>u.dept?u.dept[currentLang]:''))].filter(Boolean);
-  const fdEl=document.getElementById('filter-dept');const prev=fdEl.value;
-  fdEl.innerHTML=("<option value=\"\">"+(currentLang==='th'?'ทุกฝ่าย':'All Depts')+"</option>")+allDepts.map(d=>("<option"+(prev===d?' selected':'')+">"+(d)+"</option>")).join('');
-  const empIds=Object.keys(USERS).filter(id=>{const u=USERS[id];if(u.isHR)return false;if(fl&&u.level!==fl)return false;if(fd&&u.dept&&u.dept[currentLang]!==fd)return false;return true;});
+  // อ่าน dept filter ก่อน rebuild
+  const fdEl=document.getElementById('filter-dept');
+  const prevDept=fdEl.value;
+  // rebuild dept options
+  const allDepts=[...new Set(Object.values(USERS).filter(u=>!u.isHR&&!u.inactive).map(u=>u.dept?u.dept[currentLang]:''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  fdEl.innerHTML='<option value="">'+(currentLang==='th'?'ทุกฝ่าย':'All Depts')+'</option>'+allDepts.map(d=>'<option'+(prevDept===d?' selected':'')+' value="'+d+'">'+d+'</option>').join('');
+  // อ่านค่าหลัง rebuild (ถ้า prevDept ยังอยู่ใน list จะ selected อัตโนมัติ)
+  const fd=fdEl.value;
+  const empIds=Object.keys(USERS).filter(id=>{
+    const u=USERS[id];
+    if(!u)return false;
+    if(u.isHR)return false;
+    if(fl && u.level!==fl)return false;
+    if(fd && (!u.dept || u.dept[currentLang]!==fd))return false;
+    return true;
+  });
+  if(!empIds.length){
+    document.getElementById('hr-emp-list').innerHTML='<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--text-muted);">'+(currentLang==='th'?'ไม่พบพนักงาน':'No employees found')+'</td></tr>';
+    return;
+  }
   document.getElementById('hr-emp-list').innerHTML=empIds.map(id=>{
     const u=USERS[id];const supId=u.supervisorId;const supName=supId?userName(USERS[supId]):'—';
     const eData=evalStore[id]||{};
@@ -3562,12 +3604,21 @@ function validateRow(row, headers, lineNum) {
   if (obj.password && obj.password.length !== 5)
     errors.push(("password ต้องมี 5 หลัก (ได้ "+(obj.password.length)+")"));
 
-  // start_date - support DD/MM/YYYY
+  // start_date - support Excel serial, DD/MM/YYYY, YYYY-MM-DD
   if (obj.start_date) {
-    var dp=obj.start_date.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
-    if(dp) obj.start_date=dp[3]+'-'+dp[2].padStart(2,'0')+'-'+dp[1].padStart(2,'0');
+    var sdStr = String(obj.start_date).trim();
+    // Excel serial number (เช่น 45173 → 2023-09-01)
+    if (/^\d{4,5}$/.test(sdStr)) {
+      var excelEpoch = new Date(Date.UTC(1899, 11, 30));
+      var excelDate = new Date(excelEpoch.getTime() + Number(sdStr) * 86400000);
+      sdStr = excelDate.toISOString().substring(0, 10);
+      obj.start_date = sdStr;
+    }
+    // DD/MM/YYYY or DD-MM-YYYY
+    var dp=sdStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if(dp) { sdStr=dp[3]+'-'+dp[2].padStart(2,'0')+'-'+dp[1].padStart(2,'0'); obj.start_date=sdStr; }
     const d = new Date(obj.start_date);
-    if (isNaN(d.getTime())) errors.push(("start_date '"+obj.start_date+"' รูปแบบไม่ถูกต้อง"));
+    if (isNaN(d.getTime())) errors.push(("start_date '"+obj.start_date+"' รูปแบบไม่ถูกต้อง (รองรับ YYYY-MM-DD, DD/MM/YYYY)"));
     else if (d > new Date())  warnings.push(("start_date อยู่ในอนาคต"));
   }
 
