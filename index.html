@@ -165,6 +165,7 @@ textarea{resize:vertical;min-height:70px;}
 .score-row-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
 .score-btn{width:44px;height:36px;border-radius:8px;border:1.5px solid var(--border);background:white;font-size:14px;font-weight:600;cursor:pointer;color:var(--text-muted);transition:all .15s;display:flex;align-items:center;justify-content:center;}
 .score-btn:hover{border-color:var(--primary-light);color:var(--primary);background:var(--primary-pale);}
+.score-btn:disabled{opacity:0.45;cursor:not-allowed;pointer-events:none;}
 .score-btn.s1.sel{background:#c0392b;border-color:#c0392b;color:white;}
 .score-btn.s2.sel{background:#e67e22;border-color:#e67e22;color:white;}
 .score-btn.s3.sel{background:#7f8c8d;border-color:#7f8c8d;color:white;}
@@ -1233,13 +1234,10 @@ var SUBS_FINAL      = {};  // finalId      → [empId, ...]   (Final ใช้)
 // Helper: รายชื่อลูกน้องตาม role ของ currentUser
 function getMySubordinates(user) {
   if (!user) return [];
-  if (user.isFinal) {
-    // Final เห็นเฉพาะคนที่ finalId ชี้มา
-    return (SUBS_FINAL[user.id] || []);
-  } else {
-    // S-Level supervisor เห็นเฉพาะคนที่ supervisorId ชี้มา
-    return (SUBS_SUPERVISOR[user.id] || []);
-  }
+  var list = user.isFinal
+    ? (SUBS_FINAL[user.id] || [])
+    : (SUBS_SUPERVISOR[user.id] || []);
+  return list.filter(function(id){ return USERS[id] && !USERS[id].inactive; });
 }
 
 // SUBORDINATES (legacy — ยังคงไว้เพื่อ backward compat กับโค้ดบางส่วน)
@@ -1593,7 +1591,7 @@ function doLogin(){
   updateNotifBadges();
 }
 function doLogout(){
-  currentUser=null;selfScores={};subScores={};
+  currentUser=null;selfScores={};subScores={};proposalStore=[];currentSubId=null;
   document.getElementById('screen-app').classList.add('hidden');
   document.getElementById('screen-login').classList.remove('hidden');
   document.getElementById('login-id').value='';document.getElementById('login-pass').value='';
@@ -2565,7 +2563,10 @@ function submitSubEval(){
 // ── INBOX ──
 function renderInbox(){
   const msgs=inbox[currentUser.id]||[];const container=document.getElementById('inbox-list');
-  msgs.forEach(m=>m.read=true);updateNotifBadges();
+  const hadUnread = msgs.some(m=>!m.read);
+  msgs.forEach(m=>m.read=true);
+  updateNotifBadges();
+  if(hadUnread) syncInbox(currentUser.id);
   if(!msgs.length){container.innerHTML=("<p style=\"color:var(--text-muted);padding:1rem;\">"+(t('no-msg'))+"</p>");return;}
   container.innerHTML=msgs.map(m=>("\n    <div class=\"email-card\">\n      <div style=\"display:flex;justify-content:space-between;\"><b style=\"font-size:13px;\">"+(m.from)+"</b><span style=\"font-size:11px;color:var(--text-muted);\">"+(m.time)+"</span></div>\n      <div style=\"font-size:14px;font-weight:700;color:var(--primary);margin:4px 0;\">"+(m.subject)+"</div>\n      <div style=\"font-size:13px;color:var(--text-muted);\">"+(m.body)+"</div>\n      "+(m.link?("<div class=\"email-link\" onclick=\"showPage('"+(m.link)+"')\">→ "+(currentLang==='th'?'คลิกเพื่อดำเนินการ':'Click to proceed')+"</div>"):'')+"\n    </div>")).join('');
 }
