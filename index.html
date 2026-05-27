@@ -1056,7 +1056,7 @@ function setLang(lang) {
   if(currentPage === 'page-eval-others') renderEvalOthers();
   if(currentPage === 'page-hr-proposals') renderProposalList();
   if(currentPage === 'page-final-report') renderFinalReport();
-  if(currentPage === 'page-hr-employees') renderHrEmployees();
+  if(currentPage === 'page-hr-employees') renderHrEmpList();
   if(currentUser) setupSidebar();
   if(currentPage==='page-eval-sub'&&currentSubId) renderSLevelSummary();
   if(pid==='page-proposal') toggleProposalType();
@@ -1964,7 +1964,7 @@ function doResetEval(empId, type) {
   if (type==='final'||type==='all') { delete e.finalTotal; delete e.finalScores; delete e.finalComment; delete e.specialAdj; delete e.specialReason; }
   gasRun('saveEval',{emp_id:empId,self_total:e.selfTotal||'',s_total:e.sTotal||'',final_total:e.finalTotal||'',special_adj:e.specialAdj||false,special_reason:e.specialReason||'',s_comment:e.sComment||'',final_comment:e.finalComment||'',self_scores:e.selfScores||null,s_scores:e.sScores||null,final_scores:e.finalScores||null}).then(function(r){
     showToast(currentLang==='th'?'รีเซ็ตเรียบร้อย':'Reset successful','success');
-    renderHrEmployees();
+    renderHrEmpList();
   }).catch(function(e){ showToast('Error: '+e.message,''); });
 }
 
@@ -2619,28 +2619,33 @@ function hrCloseRound(){
 // ── HR EMPLOYEES ──
 function renderHrEmpList(){
   const fl=document.getElementById('filter-level').value;
-  // อ่าน dept filter ก่อน rebuild
   const fdEl=document.getElementById('filter-dept');
   const prevDept=fdEl.value;
-  // rebuild dept options
-  const allDepts=[...new Set(Object.values(USERS).filter(u=>!u.isHR&&!u.inactive).map(u=>u.dept?u.dept[currentLang]:''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+
+  // rebuild dept options — รวม inactive ด้วยเพื่อให้ dropdown ครบ
+  const allDepts=[...new Set(Object.values(USERS).filter(u=>!u.isHR).map(u=>u.dept?u.dept[currentLang]||u.dept.th||'':''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
   fdEl.innerHTML='<option value="">'+(currentLang==='th'?'ทุกฝ่าย':'All Depts')+'</option>'+allDepts.map(d=>'<option'+(prevDept===d?' selected':'')+' value="'+d+'">'+d+'</option>').join('');
-  // อ่านค่าหลัง rebuild (ถ้า prevDept ยังอยู่ใน list จะ selected อัตโนมัติ)
   const fd=fdEl.value;
+
   const empIds=Object.keys(USERS).filter(id=>{
     const u=USERS[id];
-    if(!u)return false;
-    if(u.isHR)return false;
-    if(fl && u.level!==fl)return false;
-    if(fd && (!u.dept || u.dept[currentLang]!==fd))return false;
+    if(!u) return false;
+    if(u.isHR) return false;
+    if(fl && u.level!==fl) return false;
+    if(fd){
+      const deptName=u.dept?(u.dept[currentLang]||u.dept.th||''):'';
+      if(deptName!==fd) return false;
+    }
     return true;
   });
+
   if(!empIds.length){
     document.getElementById('hr-emp-list').innerHTML='<tr><td colspan="9" style="text-align:center;padding:1.5rem;color:var(--text-muted);">'+(currentLang==='th'?'ไม่พบพนักงาน':'No employees found')+'</td></tr>';
     return;
   }
+
   document.getElementById('hr-emp-list').innerHTML=empIds.map(id=>{
-    const u=USERS[id];const supId=u.supervisorId;const supName=supId?userName(USERS[supId]):'—';
+    const u=USERS[id];const supId=u.supervisorId;const supName=supId&&USERS[supId]?userName(USERS[supId]):'—';
     const eData=evalStore[id]||{};
     const status=eData.finalTotal?{th:'เสร็จสิ้น',en:'Done'}:eData.sTotal?{th:'S-Eval แล้ว',en:'S-Eval Done'}:eData.selfTotal?{th:'Self Eval แล้ว',en:'Self Eval Done'}:{th:'รอ',en:'Pending'};
     const sc=eData.finalTotal?'badge-green':eData.sTotal?'badge-teal':eData.selfTotal?'badge-amber':'badge-gray';
@@ -2649,7 +2654,9 @@ function renderHrEmpList(){
     const deactBtn=isInactive
       ?("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--success);border-color:var(--success);\" onclick=\"toggleEmpActive('"+(id)+"',true)\">"+(currentLang==='th'?'เปิดใช้':'Activate')+"</button>")
       :("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--danger);border-color:var(--danger);\" onclick=\"confirmDeactivate('"+(id)+"')\">"+(currentLang==='th'?'ปิดใช้':'Deactivate')+"</button>");
-    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level)+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
+    const deptDisplay=u.dept?(u.dept[currentLang]||u.dept.th||'—'):'—';
+    const posDisplay=u.position?(u.position[currentLang]||u.position.th||'—'):'—';
+    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
   }).join('');
 }
 function openAddEmpModal(){document.getElementById('modal-add-emp').classList.remove('hidden');}
