@@ -4123,6 +4123,8 @@ function saveSettings() {
   updateSLevelDeadlineStatus();
   showToast(currentLang === 'th' ? 'บันทึกการตั้งค่าเรียบร้อย' : 'Settings saved', 'success');
   if (currentPage === 'page-eval-others') renderEvalOthers();
+  if (currentPage === 'page-self-eval') renderSelfEvalPage();
+  if (currentPage === 'page-hr-employees') renderHrEmployees();
 }
 
 function loadDeadlineSetting() {
