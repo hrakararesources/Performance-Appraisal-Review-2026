@@ -4583,6 +4583,25 @@ function startDeadlinePolling() {
         if (e3) e3.value = '';
       }
 
+      // sync skipSelf ของ user ปัจจุบัน — เบามาก ดึงแค่ 1 row
+      if (currentUser && !currentUser.isHR) {
+        try {
+          var uf = await gasRun('getUser', { emp_id: currentUser.id });
+          if (uf) {
+            var changed = uf.skipSelf !== currentUser.skipSelf;
+            currentUser.skipSelf = !!uf.skipSelf;
+            USERS[currentUser.id].skipSelf = !!uf.skipSelf;
+            if (changed) {
+              setupSidebar();
+              if (currentUser.skipSelf && currentPage === 'page-self-eval') {
+                showPage('page-home'); renderHome();
+                showToast(currentLang === 'th' ? 'ท่านไม่จำเป็นต้องประเมินตนเองในรอบนี้' : 'Self evaluation is not required for you this round.');
+              }
+            }
+          }
+        } catch(ef) {}
+      }
+
       // Re-render หน้าที่เปิดอยู่ถ้าเกี่ยวกับ deadline
       if (currentPage === 'page-self-eval') renderSelfEvalPage();
       if (currentPage === 'page-hr-settings' && currentUser && currentUser.isHR) {
