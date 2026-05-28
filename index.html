@@ -4741,7 +4741,7 @@ async function toggleSkipSelf(empId) {
     showToast(newVal
       ? (currentLang==='th'?'✅ '+name+' ไม่ต้องประเมินตนเองแล้ว':'✅ '+name+' exempted from self eval')
       : (currentLang==='th'?'↩️ ยกเลิกการยกเว้น '+name+' แล้ว':'↩️ Exemption removed for '+name));
-    renderHrEmployees();
+    renderHrEmpList();
   } catch(e) {
     u.skipSelf = !newVal; // revert
     showToast('❌ ' + e.message);
