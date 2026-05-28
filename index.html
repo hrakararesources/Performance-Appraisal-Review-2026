@@ -1674,6 +1674,7 @@ function setupSidebar(){
   const tenEl=document.getElementById('sb-tenure-badge');
   if(tenEl){const y=calcTenure(u.startDate);tenEl.textContent=y!==null?tenureLabel(u.startDate):'';tenEl.style.display=y!==null?'':'none';}
   document.getElementById('nav-employee').style.display=u.isHR?'none':'';
+  var navSelf=document.getElementById('nav-self-eval'); if(navSelf) navSelf.style.display=(u.skipSelf?'none':'');
   document.getElementById('nav-hr').style.display=u.isHR?'':'none';
   var navPF=document.getElementById('nav-proposals-final'); if(navPF) navPF.style.display=(u.isFinal&&!u.isHR)?'':'none';
   var navRF=document.getElementById('nav-report-final'); if(navRF) navRF.style.display=(u.isFinal&&!u.isHR)?'':'none';
@@ -2399,6 +2400,12 @@ function renderGradeDistChart() {
 // ── SELF EVAL ──
 function renderSelfEvalPage(){
   const u=currentUser;const eData=evalStore[u.id]||{};
+  // Block ถ้า skipSelf = true
+  if (u.skipSelf) {
+    showPage('page-home');
+    showToast(currentLang==='th'?'ท่านไม่จำเป็นต้องประเมินตนเอง':'Self evaluation is not required for you.');
+    return;
+  }
   // Show locked warning if past deadline
   var submitBtn = document.getElementById('t-submit-btn');
   if (submitBtn) {
@@ -2763,7 +2770,7 @@ function renderHrEmpList(){
       :("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--danger);border-color:var(--danger);\" onclick=\"confirmDeactivate('"+(id)+"')\">"+(currentLang==='th'?'ปิดใช้':'Deactivate')+"</button>");
     const deptDisplay=u.dept?(u.dept[currentLang]||u.dept.th||'—'):'—';
     const posDisplay=u.position?(u.position[currentLang]||u.position.th||'—'):'—';
-    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
+    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSelf?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSelf?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSelf('"+(id)+"')\">"+(u.skipSelf?(currentLang==='th'?'✓ ข้าม Self':'✓ Skip Self'):(currentLang==='th'?'ข้าม Self':'Skip Self'))+"</button>")+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
   }).join('');
 }
 function openAddEmpModal(){document.getElementById('modal-add-emp').classList.remove('hidden');}
@@ -3938,6 +3945,7 @@ function confirmImport() {
       isFinal:    isFinal,
       isHR:       isHR,
       inactive:   inactive,
+      skipSelf:   (o.skip_self||'').toLowerCase() === 'true',
     };
 
     if (r.isDuplicate) {
@@ -4679,6 +4687,47 @@ async function releaseSelected() {
   }
   showToast('✅ ส่งผลแล้ว '+ok+'/'+selected.length+' คน');
   renderReleaseTable();
+}
+// ─────────────────────────────────────────────────────────────────
+
+
+// ── SKIP SELF EVAL ───────────────────────────────────────────────
+async function toggleSkipSelf(empId) {
+  var u = USERS[empId];
+  if (!u) return;
+  var newVal = !u.skipSelf;
+  var name = userName(u);
+  var msg = newVal
+    ? (currentLang==='th' ? name+' จะไม่ต้องประเมินตนเอง ยืนยัน?' : 'Exempt '+name+' from self eval?')
+    : (currentLang==='th' ? 'ยกเลิกการยกเว้น '+name+' ยืนยัน?' : 'Remove exemption for '+name+'?');
+  if (!confirm(msg)) return;
+  u.skipSelf = newVal;
+  try {
+    await gasRun('saveUser', {
+      emp_id: empId,
+      name_th: u.name.th, name_en: u.name.en,
+      pass: u.pass,
+      dept_th: u.dept.th, dept_en: u.dept.en,
+      position_th: u.position.th, position_en: u.position.en,
+      level: u.level,
+      start_date: u.startDate || '',
+      supervisor_id: u.supervisorId || '',
+      final_id: u.finalId || '',
+      is_final: u.isFinal || false,
+      is_hr: u.isHR || false,
+      inactive: u.inactive || false,
+      last_promotion: u.lastPromotion || '',
+      email: u.email || '',
+      skip_self: newVal,
+    });
+    showToast(newVal
+      ? (currentLang==='th'?'✅ '+name+' ไม่ต้องประเมินตนเองแล้ว':'✅ '+name+' exempted from self eval')
+      : (currentLang==='th'?'↩️ ยกเลิกการยกเว้น '+name+' แล้ว':'↩️ Exemption removed for '+name));
+    renderHrEmployees();
+  } catch(e) {
+    u.skipSelf = !newVal; // revert
+    showToast('❌ ' + e.message);
+  }
 }
 // ─────────────────────────────────────────────────────────────────
 
