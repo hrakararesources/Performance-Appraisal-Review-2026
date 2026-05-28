@@ -1108,7 +1108,7 @@ function setLang(lang) {
   if(currentPage === 'page-my-result') renderMyResult();
   if(currentPage === 'page-hr-settings'){ refreshDeadlineInputs(); initReleaseTable(); }
   if(currentPage === 'page-eval-others') renderEvalOthers();
-  if(currentPage === 'page-hr-proposals') loadProposals();
+  if(currentPage === 'page-hr-proposals') renderProposalList(); // render จาก memory ไม่ยิง GAS
   if(currentPage === 'page-final-report') renderFinalReport();
   if(currentPage === 'page-hr-employees') renderHrEmpList();
   if(currentUser) setupSidebar();
