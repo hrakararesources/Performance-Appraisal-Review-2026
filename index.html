@@ -2737,14 +2737,13 @@ function renderHrEmpList(){
   const prevDept=fdEl.value;
 
   // rebuild dept options — รวม inactive ด้วยเพื่อให้ dropdown ครบ
-  const allDepts=[...new Set(Object.values(USERS).filter(u=>!u.isHR).map(u=>u.dept?u.dept[currentLang]||u.dept.th||'':''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
+  const allDepts=[...new Set(Object.values(USERS).map(u=>u.dept?u.dept[currentLang]||u.dept.th||'':''))].filter(Boolean).sort((a,b)=>a.localeCompare(b,'th'));
   fdEl.innerHTML='<option value="">'+(currentLang==='th'?'ทุกฝ่าย':'All Depts')+'</option>'+allDepts.map(d=>'<option'+(prevDept===d?' selected':'')+' value="'+d+'">'+d+'</option>').join('');
   const fd=fdEl.value;
 
   const empIds=Object.keys(USERS).filter(id=>{
     const u=USERS[id];
     if(!u) return false;
-    if(u.isHR) return false;
     if(fl && u.level!==fl) return false;
     if(fd){
       const deptName=u.dept?(u.dept[currentLang]||u.dept.th||''):'';
