@@ -3151,7 +3151,7 @@ function viewEmpReport(empId) {
 function sendBroadcastEmail(type){
   if (type === 'self') {
     // Self: inbox only (ใช้ Line OA แทน email)
-    Object.keys(USERS).filter(function(id){ return !USERS[id].isHR && !USERS[id].inactive; }).forEach(function(id){
+    Object.keys(USERS).filter(function(id){ return !USERS[id].isHR && !USERS[id].inactive && !USERS[id].skipSelf; }).forEach(function(id){
       addInboxMsg(id,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
         subject:currentLang==='th'?'แจ้งเตือน: กรุณาประเมินตนเอง':'Reminder: Please complete self-evaluation',
         body:t('not-eval-yet'),link:'page-self-eval'});
