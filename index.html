@@ -1441,28 +1441,25 @@ async function loadFromSheets() {
         if (!SUBORDINATES[u.finalId].includes(id)) SUBORDINATES[u.finalId].push(id);
       }
     });
-    // Load TopicConfig
-    try {
-      var tc = await gasRun('getTopicConfig');
-      if (tc && tc.configs) {
-        Object.keys(tc.configs).forEach(function(lk) {
-          if (EVAL_DATA[lk]) {
-            EVAL_DATA[lk] = tc.configs[lk];
-            EVAL_DATA_EDIT[lk] = JSON.parse(JSON.stringify(tc.configs[lk]));
-          }
-        });
-      }
-    } catch(e) { console.warn('TopicConfig load failed:', e); }
+    // Load TopicConfig — จาก getAll โดยตรง (ไม่ต้องยิง GAS เพิ่ม)
+    if (r.topicConfigs) {
+      Object.keys(r.topicConfigs).forEach(function(lk) {
+        if (EVAL_DATA[lk]) {
+          EVAL_DATA[lk] = r.topicConfigs[lk];
+          EVAL_DATA_EDIT[lk] = JSON.parse(JSON.stringify(r.topicConfigs[lk]));
+        }
+      });
+    }
 
-    // Load ScoreDescConfig
-    try {
-      var sd = await gasRun('getScoreDescConfig');
-      if (sd && sd.descs) {
-        SCORE_DESCS = sd.descs;
-      }
-    } catch(e) { console.warn('ScoreDescConfig load failed:', e); }
+    // Load ScoreDescConfig — จาก getAll โดยตรง
+    if (r.scoreDescs) {
+      SCORE_DESCS = r.scoreDescs;
+    }
 
-    try { var pr = await gasRun('getProposals'); if (pr && pr.proposals) proposalStore = pr.proposals; } catch(e) {}
+    // Load Proposals — จาก getAll โดยตรง
+    if (r.proposals) {
+      proposalStore = r.proposals;
+    }
 
     // Load Deadlines from Sheets (shared across all users — overrides localStorage)
     if (r.deadlines) {
