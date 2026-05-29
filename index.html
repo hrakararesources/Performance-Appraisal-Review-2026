@@ -1665,7 +1665,7 @@ function setupSidebar(){
   var posLbl=document.getElementById('t-pos-label');
   if(deptLbl) deptLbl.textContent=currentLang==='en'?'DEPT':'ฝ่าย';
   if(posLbl) posLbl.textContent=currentLang==='en'?'POSITION':'ตำแหน่ง';
-  document.getElementById('sb-level-badge').textContent=u.level;
+  document.getElementById('sb-level-badge').textContent=(u.displayLevel||u.level);
   const tenEl=document.getElementById('sb-tenure-badge');
   if(tenEl){const y=calcTenure(u.startDate);tenEl.textContent=y!==null?tenureLabel(u.startDate):'';tenEl.style.display=y!==null?'':'none';}
   document.getElementById('nav-employee').style.display=u.isHR?'none':'';
@@ -1740,7 +1740,7 @@ function renderHome(){
   const stats=document.getElementById('home-stats');
   const grade=eData.selfTotal?getGrade(eData.selfTotal):null;
   const fg=eData.finalTotal?getGrade(eData.finalTotal):null;
-  stats.innerHTML=("\n    <div class=\"stat-card accent\"><div class=\"label\">"+(t('level'))+"</div><div class=\"value\" style=\"font-size:18px;\">"+(u.level)+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid #7f8c8d;\"><div class=\"label\">"+(t('dept'))+"</div><div class=\"value\" style=\"font-size:16px;\">"+(u.dept?u.dept[currentLang]:'—')+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid var(--accent);\"><div class=\"label\">"+(currentLang==='th'?'อายุงาน':'Tenure')+"</div><div class=\"value\" style=\"font-size:20px;\">"+(u.startDate?tenureLabel(u.startDate):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(u.startDate?'เริ่ม '+new Date(u.startDate).toLocaleDateString(currentLang==='th'?'th-TH':'en-GB',{day:'numeric',month:'short',year:'numeric'}):'—')+"</div></div>\n    <div class=\"stat-card primary\"><div class=\"label\">Self "+(t('score'))+"</div><div class=\"value\">"+(eData.selfTotal?eData.selfTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(grade?grade.letter+' – '+grade.label:'—')+"</div></div>\n    <div class=\"stat-card success\"><div class=\"label\">Final "+(t('score'))+"</div><div class=\"value\">"+(eData.finalTotal?eData.finalTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(fg?fg.letter+' – '+fg.label:'—')+"</div></div>\n  ");
+  stats.innerHTML=("\n    <div class=\"stat-card accent\"><div class=\"label\">"+(t('level'))+"</div><div class=\"value\" style=\"font-size:18px;\">"+(u.displayLevel||u.level)+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid #7f8c8d;\"><div class=\"label\">"+(t('dept'))+"</div><div class=\"value\" style=\"font-size:16px;\">"+(u.dept?u.dept[currentLang]:'—')+"</div></div>\n    <div class=\"stat-card\" style=\"border-left:4px solid var(--accent);\"><div class=\"label\">"+(currentLang==='th'?'อายุงาน':'Tenure')+"</div><div class=\"value\" style=\"font-size:20px;\">"+(u.startDate?tenureLabel(u.startDate):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(u.startDate?'เริ่ม '+new Date(u.startDate).toLocaleDateString(currentLang==='th'?'th-TH':'en-GB',{day:'numeric',month:'short',year:'numeric'}):'—')+"</div></div>\n    <div class=\"stat-card primary\"><div class=\"label\">Self "+(t('score'))+"</div><div class=\"value\">"+(eData.selfTotal?eData.selfTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(grade?grade.letter+' – '+grade.label:'—')+"</div></div>\n    <div class=\"stat-card success\"><div class=\"label\">Final "+(t('score'))+"</div><div class=\"value\">"+(eData.finalTotal?eData.finalTotal.toFixed(2):'—')+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(fg?fg.letter+' – '+fg.label:'—')+"</div></div>\n  ");
   // ซ่อน Final card ถ้ายังไม่ release
   if (!currentUser.isHR && !eData.resultReleased) {
     var cards = stats.querySelectorAll('.stat-card');
@@ -1987,7 +1987,7 @@ function printProposalDetail() {
     +field('วันที่เริ่มงาน / Start Date',u.startDate?u.startDate.substring(0,10):'—')
     +field('อายุงาน / Tenure',u.startDate?tenureLabel(u.startDate):'—')
     +field('ตำแหน่งที่เสนอ / Proposed Position',p.proposed_position||'—')
-    +field('Level',u.level||'—')
+    +field('Level',(u.displayLevel||u.level)||'—')
     +'</div></div>'
     +'<div style="margin-bottom:16px;"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;border-bottom:2px solid #1A1A2E;padding-bottom:5px;">'
     +'<span style="background:#1A1A2E;color:white;font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;letter-spacing:0.5px;">Part B</span>'
@@ -2416,7 +2416,7 @@ function renderSelfEvalPage(){
   }
   selfScores=eData.selfScores?JSON.parse(JSON.stringify(eData.selfScores)):{};
   document.getElementById('self-eval-title').textContent=(""+(t('self-eval'))+" – "+(userName(u))+"");
-  document.getElementById('self-eval-subtitle').textContent=(""+(t('level'))+": "+(u.level)+" | "+(t('dept'))+": "+(u.dept?u.dept[currentLang]:'—')+" | "+(t('pos'))+": "+(u.position?u.position[currentLang]:'—')+"");
+  document.getElementById('self-eval-subtitle').textContent=(""+(t('level'))+": "+(u.displayLevel||u.level)+" | "+(t('dept'))+": "+(u.dept?u.dept[currentLang]:'—')+" | "+(t('pos'))+": "+(u.position?u.position[currentLang]:'—')+"");
   buildEvalSections('self-eval-sections',u.level,selfScores,'self');
   updateSelfProgress();showPage('page-self-eval');
 }
@@ -2717,7 +2717,7 @@ function renderHrDashboard(){
   gs.innerHTML=GRADES.map(g=>("<div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\"><div style=\"width:28px;height:28px;border-radius:50%;background:"+(g.bg)+";color:"+(g.color)+";display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex-shrink:0;\">"+(g.letter)+"</div><div style=\"flex:1;\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(gc[g.letter]/mx*100)+"%;background:"+(g.bar)+";\"></div></div></div><div style=\"font-size:13px;font-weight:600;min-width:20px;\">"+(gc[g.letter])+"</div></div>")).join('');
   const tbody=document.getElementById('hr-emp-table');
   tbody.innerHTML=empIds.map(id=>{const u=USERS[id];const e=evalStore[id]||{};const fg=e.finalTotal?getGrade(e.finalTotal):null;
-    return ("<tr><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td>"+(userName(u))+"</td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td><span class=\"badge badge-blue\">"+(u.level)+"</span></td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td>"+(e.selfTotal?("<span class=\"badge badge-green\">"+(e.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.sTotal?("<span class=\"badge badge-teal\">"+(e.sTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.finalTotal?("<span class=\"badge badge-green\">"+(e.finalTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(fg?("<span class=\"badge\" style=\"background:"+(fg.bg)+";color:"+(fg.color)+";\">"+(fg.letter)+"</span>"):'—')+"</td></tr>");
+    return ("<tr><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td>"+(userName(u))+"</td><td>"+(u.dept?u.dept[currentLang]:'—')+"</td><td>"+(u.position?u.position[currentLang]:'—')+"</td><td><span class=\"badge badge-blue\">"+(u.displayLevel||u.level)+"</span></td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td>"+(e.selfTotal?("<span class=\"badge badge-green\">"+(e.selfTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.sTotal?("<span class=\"badge badge-teal\">"+(e.sTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(e.finalTotal?("<span class=\"badge badge-green\">"+(e.finalTotal.toFixed(2))+"</span>"):("<span class=\"badge badge-gray\">—</span>"))+"</td><td>"+(fg?("<span class=\"badge\" style=\"background:"+(fg.bg)+";color:"+(fg.color)+";\">"+(fg.letter)+"</span>"):'—')+"</td></tr>");
   }).join('');
 }
 function hrCloseRound(){
@@ -2764,7 +2764,7 @@ function renderHrEmpList(){
       :("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--danger);border-color:var(--danger);\" onclick=\"confirmDeactivate('"+(id)+"')\">"+(currentLang==='th'?'ปิดใช้':'Deactivate')+"</button>");
     const deptDisplay=u.dept?(u.dept[currentLang]||u.dept.th||'—'):'—';
     const posDisplay=u.position?(u.position[currentLang]||u.position.th||'—'):'—';
-    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSelf?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSelf?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSelf('"+(id)+"')\">"+(u.skipSelf?(currentLang==='th'?'✓ ข้าม Self':'✓ Skip Self'):(currentLang==='th'?'ข้าม Self':'Skip Self'))+"</button>")+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
+    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.displayLevel||u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSelf?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSelf?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSelf('"+(id)+"')\">"+(u.skipSelf?(currentLang==='th'?'✓ ข้าม Self':'✓ Skip Self'):(currentLang==='th'?'ข้าม Self':'Skip Self'))+"</button>")+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
   }).join('');
 }
 function openAddEmpModal(){document.getElementById('modal-add-emp').classList.remove('hidden');}
@@ -3122,7 +3122,7 @@ function exportReport(){
   const empIds=Object.keys(USERS).filter(id=>!USERS[id].isHR);
   let csv=(""+(t('th-code'))+",Name/ชื่อ,"+(t('th-dept'))+","+(t('th-pos'))+",อายุงาน,Level,Self,S-Eval,Final,"+(t('th-grade'))+",Label,Special\\n");
   empIds.forEach(id=>{const u=USERS[id];const e=evalStore[id]||{};const fg=e.finalTotal?getGrade(e.finalTotal):null;
-    csv+=(""+(id)+",\""+(userName(u))+"\",\""+(u.dept?u.dept[currentLang]:'')+"\", \""+(u.position?u.position[currentLang]:'')+"\", \""+(u.startDate?tenureLabel(u.startDate):'')+"\", "+(u.level)+","+(e.selfTotal||'')+","+(e.sTotal||'')+","+(e.finalTotal||'')+","+(fg?fg.letter:'')+","+(fg?fg.label:'')+","+(e.specialAdj?'Yes':'')+"\\n");});
+    csv+=(""+(id)+",\""+(userName(u))+"\",\""+(u.dept?u.dept[currentLang]:'')+"\", \""+(u.position?u.position[currentLang]:'')+"\", \""+(u.startDate?tenureLabel(u.startDate):'')+"\", "+(u.displayLevel||u.level)+","+(e.selfTotal||'')+","+(e.sTotal||'')+","+(e.finalTotal||'')+","+(fg?fg.letter:'')+","+(fg?fg.label:'')+","+(e.specialAdj?'Yes':'')+"\\n");});
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='AKR_Report_2026.csv';a.click();
   showToast(t('export-done'),'success');
@@ -3940,6 +3940,7 @@ function confirmImport() {
       isHR:       isHR,
       inactive:   inactive,
       skipSelf:   (o.skip_self||'').toLowerCase() === 'true',
+      displayLevel: (o.display_level||'').trim(),
     };
 
     if (r.isDuplicate) {
@@ -4230,7 +4231,7 @@ function renderScoreHistory() {
   let html = '<div class="card" style="margin-bottom:1rem;">';
   html += '<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">';
   html += '<div style="font-size:15px;font-weight:700;color:var(--primary);">' + (u.name[currentLang]||u.name.th) + '</div>';
-  html += '<span class="badge badge-blue">' + u.level + '</span>';
+  html += '<span class="badge badge-blue">' + (u.displayLevel||u.level) + '</span>';
   html += '<span style="font-size:13px;color:var(--text-muted);">' + (u.dept?u.dept[currentLang]:'') + '</span>';
   html += '</div>';
 
@@ -4826,7 +4827,7 @@ async function doChangePassword() {
   if (!oldVal || !newVal || !confirmVal) { showErr(isEN?'Please fill in all fields.':'กรุณากรอกข้อมูลให้ครบ'); return; }
   var currentPass = String(currentUser.pass).padStart(5,'0');
   if (currentPass !== oldVal.padStart(5,'0')) { showErr(isEN?'Current password is incorrect.':'รหัสผ่านเดิมไม่ถูกต้อง'); return; }
-  if (newVal.length < 5) { showErr(isEN?'New password must be at least 5 characters.':'รหัสผ่านใหม่ต้องมี 5 ตัวอักษร'); return; }
+  if (newVal.length < 5) { showErr(isEN?'New password must be at least 5 characters.':'รหัสผ่านใหม่ต้องมีอย่างน้อย 5 ตัวอักษร'); return; }
   if (newVal === oldVal) { showErr(isEN?'New password must differ from current.':'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม'); return; }
   if (newVal !== confirmVal) { showErr(isEN?'Passwords do not match.':'รหัสผ่านใหม่ไม่ตรงกัน'); return; }
   var sb = document.getElementById('cpwd-submit');
@@ -5183,6 +5184,6 @@ window.addEventListener('DOMContentLoaded',()=>{
 </div>
 
 <!-- Change Password Modal -->
-<div id="modal-change-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;"><div style="background:white;border-radius:12px;padding:2rem;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;"><h3 style="margin:0;font-size:18px;color:var(--primary);" id="cpwd-title">🔑 เปลี่ยนรหัสผ่าน</h3><button onclick="hideChangePwdModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button></div><div style="display:flex;flex-direction:column;gap:14px;"><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-old-label">รหัสผ่านเดิม</label><input type="password" id="cpwd-old" maxlength="20" placeholder="รหัสผ่านเดิม" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-new-label">รหัสผ่านใหม่</label><input type="password" id="cpwd-new" maxlength="20" placeholder="รหัสผ่านใหม่ (ต้องมี 5 ตัวอักษร)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-confirm-label">ยืนยันรหัสผ่านใหม่</label><input type="password" id="cpwd-confirm" maxlength="20" placeholder="ยืนยันรหัสผ่านใหม่" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><p id="cpwd-error" style="color:#e74c3c;font-size:13px;margin:0;display:none;"></p></div><div style="display:flex;gap:10px;margin-top:1.5rem;"><button onclick="hideChangePwdModal()" class="btn btn-outline" style="flex:1;" id="cpwd-cancel">ยกเลิก</button><button onclick="doChangePassword()" class="btn btn-primary" style="flex:1;" id="cpwd-submit">บันทึก</button></div></div></div>
+<div id="modal-change-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;"><div style="background:white;border-radius:12px;padding:2rem;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;"><h3 style="margin:0;font-size:18px;color:var(--primary);" id="cpwd-title">🔑 เปลี่ยนรหัสผ่าน</h3><button onclick="hideChangePwdModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button></div><div style="display:flex;flex-direction:column;gap:14px;"><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-old-label">รหัสผ่านเดิม</label><input type="password" id="cpwd-old" maxlength="20" placeholder="รหัสผ่านเดิม" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-new-label">รหัสผ่านใหม่</label><input type="password" id="cpwd-new" maxlength="20" placeholder="รหัสผ่านใหม่ (อย่างน้อย 5 ตัวอักษร)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-confirm-label">ยืนยันรหัสผ่านใหม่</label><input type="password" id="cpwd-confirm" maxlength="20" placeholder="ยืนยันรหัสผ่านใหม่" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><p id="cpwd-error" style="color:#e74c3c;font-size:13px;margin:0;display:none;"></p></div><div style="display:flex;gap:10px;margin-top:1.5rem;"><button onclick="hideChangePwdModal()" class="btn btn-outline" style="flex:1;" id="cpwd-cancel">ยกเลิก</button><button onclick="doChangePassword()" class="btn btn-primary" style="flex:1;" id="cpwd-submit">บันทึก</button></div></div></div>
 </body>
 </html>
