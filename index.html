@@ -394,6 +394,7 @@ textarea{resize:vertical;min-height:70px;}
         <button class="lang-btn active" id="sb-lang-th" onclick="setLang('th')">ไทย</button>
         <button class="lang-btn" id="sb-lang-en" onclick="setLang('en')">EN</button>
       </div>
+      <button class="btn btn-sm" onclick="showChangePwdModal()" style="flex:0 0 auto;margin:0;background:rgba(255,255,255,.15);color:white;border:none;padding:6px 10px;font-size:12px;" title="เปลี่ยนรหัสผ่าน / Change Password">🔑</button>
       <button class="btn btn-logout btn-sm sidebar-footer" onclick="doLogout()" style="flex:1;margin:0;background:rgba(255,255,255,.1);color:white;border:none;">
         <span data-th="ออกจากระบบ" data-en="Logout">ออกจากระบบ</span>
       </button>
@@ -4788,6 +4789,72 @@ async function toggleReleaseResult(empId, release) {
 }
 // ─────────────────────────────────────────────────────────────────
 
+
+// ── CHANGE PASSWORD ──────────────────────────────────────────────
+function showChangePwdModal() {
+  var modal = document.getElementById('modal-change-pwd');
+  if (!modal) return;
+  ['cpwd-old','cpwd-new','cpwd-confirm'].forEach(function(id){
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var err = document.getElementById('cpwd-error');
+  if (err) { err.style.display='none'; err.textContent=''; }
+  var isEN = currentLang === 'en';
+  var labels = {
+    title:   isEN ? 'Change Password'        : 'เปลี่ยนรหัสผ่าน',
+    old:     isEN ? 'Current Password'       : 'รหัสผ่านเดิม',
+    newp:    isEN ? 'New Password'           : 'รหัสผ่านใหม่',
+    confirm: isEN ? 'Confirm New Password'   : 'ยืนยันรหัสผ่านใหม่',
+    cancel:  isEN ? 'Cancel'                 : 'ยกเลิก',
+    save:    isEN ? 'Save'                   : 'บันทึก',
+  };
+  var t = document.getElementById('cpwd-title');    if (t) t.textContent = '🔑 ' + labels.title;
+  var ol = document.getElementById('cpwd-old-label');     if (ol) ol.textContent = labels.old;
+  var nl = document.getElementById('cpwd-new-label');     if (nl) nl.textContent = labels.newp;
+  var cl = document.getElementById('cpwd-confirm-label'); if (cl) cl.textContent = labels.confirm;
+  var cn = document.getElementById('cpwd-cancel');        if (cn) cn.textContent = labels.cancel;
+  var sb = document.getElementById('cpwd-submit');        if (sb) sb.textContent = labels.save;
+  modal.style.display = 'flex';
+}
+
+function hideChangePwdModal() {
+  var modal = document.getElementById('modal-change-pwd');
+  if (modal) modal.style.display = 'none';
+}
+
+async function doChangePassword() {
+  var oldVal     = (document.getElementById('cpwd-old')     || {}).value || '';
+  var newVal     = (document.getElementById('cpwd-new')     || {}).value || '';
+  var confirmVal = (document.getElementById('cpwd-confirm') || {}).value || '';
+  var errEl      = document.getElementById('cpwd-error');
+  var isEN       = currentLang === 'en';
+  function showErr(msg) { if (errEl) { errEl.textContent=msg; errEl.style.display='block'; } }
+  if (!oldVal || !newVal || !confirmVal) { showErr(isEN?'Please fill in all fields.':'กรุณากรอกข้อมูลให้ครบ'); return; }
+  var currentPass = String(currentUser.pass).padStart(5,'0');
+  if (currentPass !== oldVal.padStart(5,'0')) { showErr(isEN?'Current password is incorrect.':'รหัสผ่านเดิมไม่ถูกต้อง'); return; }
+  if (newVal.length < 5) { showErr(isEN?'New password must be at least 5 characters.':'รหัสผ่านใหม่ต้องมีอย่างน้อย 5 ตัวอักษร'); return; }
+  if (newVal === oldVal) { showErr(isEN?'New password must differ from current.':'รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสเดิม'); return; }
+  if (newVal !== confirmVal) { showErr(isEN?'Passwords do not match.':'รหัสผ่านใหม่ไม่ตรงกัน'); return; }
+  var sb = document.getElementById('cpwd-submit');
+  if (sb) { sb.disabled=true; sb.textContent=isEN?'Saving…':'กำลังบันทึก…'; }
+  try {
+    var res = await gasRun('changePassword', { emp_id: currentUser.id, new_pass: newVal });
+    if (res && res.ok) {
+      currentUser.pass = newVal;
+      USERS[currentUser.id].pass = newVal;
+      hideChangePwdModal();
+      showToast(isEN?'✅ Password changed successfully.':'✅ เปลี่ยนรหัสผ่านสำเร็จแล้ว');
+    } else {
+      showErr(isEN?'Failed to save. Please try again.':'บันทึกไม่สำเร็จ กรุณาลองใหม่');
+    }
+  } catch(e) {
+    showErr((isEN?'Error: ':'เกิดข้อผิดพลาด: ') + e.message);
+  } finally {
+    if (sb) { sb.disabled=false; sb.textContent=isEN?'Save':'บันทึก'; }
+  }
+}
+// ─────────────────────────────────────────────────────────────────
+
 var SELF_DEADLINE = null;
 var SLEVEL_DEADLINE = null;
 var FINAL_DEADLINE = null;
@@ -5103,5 +5170,8 @@ window.addEventListener('DOMContentLoaded',()=>{
     </div>
   </div>
 </div>
+
+<!-- Change Password Modal -->
+<div id="modal-change-pwd" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:2000;align-items:center;justify-content:center;"><div style="background:white;border-radius:12px;padding:2rem;width:90%;max-width:420px;box-shadow:0 8px 32px rgba(0,0,0,.2);"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;"><h3 style="margin:0;font-size:18px;color:var(--primary);" id="cpwd-title">🔑 เปลี่ยนรหัสผ่าน</h3><button onclick="hideChangePwdModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted);">✕</button></div><div style="display:flex;flex-direction:column;gap:14px;"><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-old-label">รหัสผ่านเดิม</label><input type="password" id="cpwd-old" maxlength="20" placeholder="รหัสผ่านเดิม" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-new-label">รหัสผ่านใหม่</label><input type="password" id="cpwd-new" maxlength="20" placeholder="รหัสผ่านใหม่ (อย่างน้อย 5 ตัวอักษร)" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><div><label style="font-size:13px;font-weight:600;color:var(--text);display:block;margin-bottom:4px;" id="cpwd-confirm-label">ยืนยันรหัสผ่านใหม่</label><input type="password" id="cpwd-confirm" maxlength="20" placeholder="ยืนยันรหัสผ่านใหม่" style="width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-family:inherit;box-sizing:border-box;"></div><p id="cpwd-error" style="color:#e74c3c;font-size:13px;margin:0;display:none;"></p></div><div style="display:flex;gap:10px;margin-top:1.5rem;"><button onclick="hideChangePwdModal()" class="btn btn-outline" style="flex:1;" id="cpwd-cancel">ยกเลิก</button><button onclick="doChangePassword()" class="btn btn-primary" style="flex:1;" id="cpwd-submit">บันทึก</button></div></div></div>
 </body>
 </html>
