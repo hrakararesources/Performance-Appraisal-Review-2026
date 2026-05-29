@@ -1049,7 +1049,7 @@ const T = {
   },
   en: {
     'app-title':'Performance Appraisal Review 2026','app-sub':'Performance Appraisal System 2026',
-    'emp-id-label':'Employee ID','pass-label':'Password (Default password: last 5 digits of your ID card)','login-btn':'Login',
+    'emp-id-label':'Employee ID','pass-label':'Password (Last 5 digits of ID card)','login-btn':'Login',
     'dept-label':'Department','pos-label':'Position',
     'home':'Home','self-eval':'Self Evaluation','eval-staff':'Evaluate Staff','inbox':'Inbox','my-results':'My Results',
     'eval-steps':'Evaluation Steps','grade-criteria':'Grading Criteria','cur-score':'Current Score',
@@ -1654,9 +1654,24 @@ function doLogout(){
   document.getElementById('login-id').value='';document.getElementById('login-pass').value='';
 }
 
+
+// ดึงพยัญชนะตัวแรกของชื่อ — ข้ามคำนำหน้า (นาย, นาง, นางสาว, ดร., Mr., Mrs., Ms.)
+function getInitial(name) {
+  if (!name) return '?';
+  var prefixes = ['นางสาว','นาง','นาย','เด็กชาย','เด็กหญิง','ดร.','ศ.','รศ.','ผศ.','พ.ต.','พ.อ.','พ.ท.','Mr.','Mrs.','Ms.','Dr.','Prof.'];
+  var s = name.trim();
+  for (var i = 0; i < prefixes.length; i++) {
+    if (s.indexOf(prefixes[i]) === 0) {
+      s = s.substring(prefixes[i].length).trim();
+      break;
+    }
+  }
+  return s.charAt(0) || name.charAt(0);
+}
+
 function setupSidebar(){
   const u=currentUser;
-  document.getElementById('sb-avatar').textContent=(userName(u)).charAt(0);
+  document.getElementById('sb-avatar').textContent=getInitial(u.name?u.name[currentLang]||u.name.th:'');
   document.getElementById('sb-name').textContent=userName(u);
   document.getElementById('sb-id').textContent=u.id;
   document.getElementById('sb-dept').textContent=u.dept?(u.dept[currentLang]||u.dept.th):'—';
