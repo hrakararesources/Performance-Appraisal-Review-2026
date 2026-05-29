@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>คู่มือการประเมินตนเอง | Self Evaluation Guide — Akara Resources KPI 2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1B4BA8;
+    --primary-light: #2d5fc4;
+    --primary-dark: #143a87;
+    --gold: #F5B731;
+    --gold-light: #ffd666;
+    --bg: #f4f6fb;
+    --bg-white: #ffffff;
+    --text: #1a2236;
+    --text-muted: #6b7a99;
+    --border: #dde3f0;
+    --success: #1a8a4a;
+    --success-bg: #e8f7ef;
+    --warn: #b45309;
+    --warn-bg: #fef3cd;
+    --info: #1B4BA8;
+    --info-bg: #e8eef9;
+    --radius: 10px;
+    --shadow: 0 2px 16px rgba(27,75,168,.10);
+    --shadow-card: 0 4px 24px rgba(27,75,168,.08);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* ── Header ── */
+  .header {
+    background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 60%, var(--primary-light) 100%);
+    color: white;
+    padding: 48px 0 40px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 260px; height: 260px;
+    border-radius: 50%;
+    background: rgba(245,183,49,.15);
+  }
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: -40px; left: 10%;
+    width: 160px; height: 160px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.06);
+  }
+  .header-inner { max-width: 860px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+  .header-logo {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: rgba(255,255,255,.12); border-radius: 8px;
+    padding: 6px 14px; margin-bottom: 20px; font-size: 13px; font-weight: 600;
+  }
+  .header-logo span { color: var(--gold); }
+  .header h1 { font-size: 28px; font-weight: 700; line-height: 1.3; margin-bottom: 6px; }
+  .header h1 small { display: block; font-size: 17px; font-weight: 400; opacity: .85; margin-top: 4px; }
+  .header-meta {
+    margin-top: 18px; display: flex; gap: 12px; flex-wrap: wrap;
+  }
+  .header-badge {
+    background: rgba(255,255,255,.15); border-radius: 20px;
+    padding: 4px 14px; font-size: 12px; font-weight: 500;
+  }
+
+  /* ── Layout ── */
+  .container { max-width: 860px; margin: 0 auto; padding: 40px 32px 60px; }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--bg-white); border-radius: var(--radius);
+    border: 1.5px solid var(--border); padding: 24px 28px;
+    margin-bottom: 36px; box-shadow: var(--shadow);
+  }
+  .toc-title {
+    font-size: 13px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--text-muted); margin-bottom: 14px;
+  }
+  .toc ol { padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: var(--primary); text-decoration: none; font-weight: 500; font-size: 14px; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .sub { font-size: 13px; color: var(--text-muted); font-weight: 400; margin-left: 4px; }
+
+  /* ── Section ── */
+  .section { margin-bottom: 36px; }
+  .section-header {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 2px solid var(--border);
+  }
+  .section-num {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--primary); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px; font-weight: 700; flex-shrink: 0;
+  }
+  .section-title { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .section-title small { display: block; font-size: 13px; color: var(--text-muted); font-weight: 400; margin-top: 1px; }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg-white); border-radius: var(--radius);
+    border: 1px solid var(--border); padding: 22px 26px;
+    margin-bottom: 16px; box-shadow: var(--shadow-card);
+  }
+  .card-title {
+    font-size: 14px; font-weight: 700; color: var(--text);
+    margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+  }
+  .card-title .icon { font-size: 16px; }
+
+  /* ── Step list ── */
+  .steps { list-style: none; padding: 0; }
+  .steps li {
+    display: flex; gap: 14px; padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .steps li:last-child { border-bottom: none; }
+  .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--gold); color: #222;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  }
+  .step-body { flex: 1; }
+  .step-th { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
+  .step-en { font-size: 13px; color: var(--text-muted); font-family: 'IBM Plex Sans', sans-serif; }
+
+  /* ── Note boxes ── */
+  .note { border-radius: 8px; padding: 14px 18px; margin-bottom: 14px; font-size: 13.5px; }
+  .note-info { background: var(--info-bg); border-left: 4px solid var(--info); }
+  .note-warn { background: var(--warn-bg); border-left: 4px solid var(--gold); }
+  .note-success { background: var(--success-bg); border-left: 4px solid var(--success); }
+  .note strong { font-weight: 700; }
+  .note .en { display: block; margin-top: 4px; font-size: 12.5px; color: var(--text-muted); font-family: 'IBM Plex Sans', sans-serif; }
+
+  /* ── Bilingual label ── */
+  .bilingual { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+  .lang-th { font-weight: 600; color: var(--text); }
+  .lang-en { font-size: 13px; color: var(--text-muted); font-family: 'IBM Plex Sans', sans-serif; }
+  .divider { color: var(--border); font-size: 12px; }
+
+  /* ── Table ── */
+  .table-wrap { overflow-x: auto; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th {
+    background: var(--primary); color: white;
+    padding: 10px 14px; text-align: left; font-weight: 600;
+  }
+  td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafd; }
+  .score-badge {
+    display: inline-block; padding: 2px 10px; border-radius: 12px;
+    font-size: 12px; font-weight: 700;
+  }
+
+  /* ── FAQ ── */
+  .faq-item {
+    border: 1px solid var(--border); border-radius: 8px;
+    margin-bottom: 10px; overflow: hidden;
+  }
+  .faq-q {
+    padding: 13px 18px; font-weight: 600; font-size: 14px;
+    background: #f8fafd; cursor: pointer;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .faq-q .en { font-size: 12px; color: var(--text-muted); font-weight: 400; font-family: 'IBM Plex Sans'; margin-top: 2px; }
+  .faq-a { padding: 14px 18px; font-size: 13.5px; line-height: 1.7; }
+  .faq-a .en { font-size: 12.5px; color: var(--text-muted); font-family: 'IBM Plex Sans'; margin-top: 6px; display: block; }
+
+  /* ── Footer ── */
+  .footer {
+    background: var(--primary-dark); color: rgba(255,255,255,.6);
+    text-align: center; padding: 22px; font-size: 12px;
+  }
+  .footer strong { color: var(--gold); }
+
+  /* ── Chips ── */
+  .chip {
+    display: inline-block; padding: 3px 12px; border-radius: 20px;
+    font-size: 12px; font-weight: 600; margin: 2px;
+  }
+  .chip-blue { background: #dce8ff; color: var(--primary); }
+  .chip-green { background: #d4f0e2; color: var(--success); }
+  .chip-gold { background: #fff0c2; color: #92600a; }
+  .chip-gray { background: #eef0f5; color: var(--text-muted); }
+
+  @media (max-width: 600px) {
+    .container { padding: 24px 16px 48px; }
+    .header-inner { padding: 0 16px; }
+    .header h1 { font-size: 22px; }
+    .card { padding: 16px 18px; }
+  }
+
+  @media print {
+    body { background: white; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-inner">
+    <div class="header-logo">
+      🏢 <span>AKARA RESOURCES</span> &nbsp;|&nbsp; KPI 2026
+    </div>
+    <h1>
+      คู่มือการประเมินตนเอง
+      <small>Self Evaluation — User Guide</small>
+    </h1>
+    <div class="header-meta">
+      <span class="header-badge">👤 สำหรับพนักงานทั่วไป / General Employees</span>
+      <span class="header-badge">📅 Performance Appraisal Review 2026</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- TOC -->
+  <div class="toc">
+    <div class="toc-title">สารบัญ / Table of Contents</div>
+    <ol>
+      <li><a href="#s1">การเข้าสู่ระบบ</a> <span class="sub">/ Login</span></li>
+      <li><a href="#s2">หน้าหลัก</a> <span class="sub">/ Home Page</span></li>
+      <li><a href="#s3">การประเมินตนเอง</a> <span class="sub">/ Self Evaluation</span></li>
+      <li><a href="#s4">การบันทึกและส่งการประเมิน</a> <span class="sub">/ Save & Submit</span></li>
+      <li><a href="#s5">กล่องจดหมาย</a> <span class="sub">/ Inbox</span></li>
+      <li><a href="#s6">ผลการประเมินของฉัน</a> <span class="sub">/ My Results</span></li>
+      <li><a href="#s7">การเปลี่ยนรหัสผ่าน</a> <span class="sub">/ Change Password</span></li>
+      <li><a href="#s8">คำถามที่พบบ่อย</a> <span class="sub">/ FAQ</span></li>
+    </ol>
+  </div>
+
+  <!-- Section 1: Login -->
+  <div class="section" id="s1">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">
+        การเข้าสู่ระบบ
+        <small>Login</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">🌐</span> การเข้าถึงระบบ / Accessing the System</div>
+      <p>ระบบสามารถเข้าใช้งานได้จาก browser บน computer หรือมือถือ โดยไม่ต้องติดตั้งแอปพลิเคชันใดๆ</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;">The system is accessible via any browser on computer or mobile — no app installation required.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">🔐</span> ข้อมูลที่ใช้เข้าระบบ / Login Credentials</div>
+      <div class="table-wrap">
+        <table>
+          <tr>
+            <th>ข้อมูล / Field</th>
+            <th>รายละเอียด / Detail</th>
+          </tr>
+          <tr>
+            <td><strong>รหัสพนักงาน</strong><br><span style="font-size:12px;color:var(--text-muted)">Employee ID</span></td>
+            <td>รหัสพนักงานของท่าน เช่น AKR26010001<br><span style="font-size:12px;color:var(--text-muted)">Your employee code, e.g. AKR26010001</span></td>
+          </tr>
+          <tr>
+            <td><strong>รหัสผ่าน</strong><br><span style="font-size:12px;color:var(--text-muted)">Password</span></td>
+            <td>เลข 5 หลักสุดท้ายของบัตรประชาชน (ค่าเริ่มต้น)<br><span style="font-size:12px;color:var(--text-muted)">Last 5 digits of your national ID (default)</span></td>
+          </tr>
+        </table>
+      </div>
+      <div class="note note-warn" style="margin-top:10px;">
+        <strong>⚠️ หมายเหตุ:</strong> หากเคยเปลี่ยนรหัสผ่านแล้ว ให้ใช้รหัสผ่านที่ตั้งใหม่
+        <span class="en">If you have changed your password before, use the new password you set.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">🌍</span> การเปลี่ยนภาษา / Language Selection</div>
+      <p>กดปุ่ม <span class="chip chip-blue">ไทย</span> หรือ <span class="chip chip-blue">EN</span> ที่มุมล่างซ้ายของหน้าจอเพื่อเปลี่ยนภาษาการแสดงผล</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;">Click the <strong>ไทย</strong> or <strong>EN</strong> button at the bottom-left to switch the display language.</p>
+    </div>
+  </div>
+
+  <!-- Section 2: Home -->
+  <div class="section" id="s2">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">
+        หน้าหลัก
+        <small>Home Page</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📊</span> ข้อมูลที่แสดงบนหน้าหลัก / Information Displayed</div>
+      <p>หลังจาก login สำเร็จ ระบบจะแสดงข้อมูลสรุปของท่านดังนี้</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;margin-bottom:12px;">After successful login, the system displays your personal summary as follows:</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th>การ์ด / Card</th><th>แสดงข้อมูล / Shows</th></tr>
+          <tr><td><strong>Level</strong></td><td>ระดับตำแหน่งของท่าน เช่น O2, M3<br><span style="font-size:12px;color:var(--text-muted)">Your position level, e.g. O2, M3</span></td></tr>
+          <tr><td><strong>ฝ่าย / Dept</strong></td><td>หน่วยงานที่สังกัด<br><span style="font-size:12px;color:var(--text-muted)">Your department</span></td></tr>
+          <tr><td><strong>อายุงาน / Tenure</strong></td><td>ระยะเวลาที่ทำงานกับองค์กร<br><span style="font-size:12px;color:var(--text-muted)">Duration of employment</span></td></tr>
+          <tr><td><strong>Self คะแนน</strong></td><td>คะแนนที่ท่านประเมินตนเอง (หลังส่งแล้ว)<br><span style="font-size:12px;color:var(--text-muted)">Your self-evaluation score (after submission)</span></td></tr>
+          <tr><td><strong>Final คะแนน</strong></td><td>คะแนนสุดท้าย (แสดงเมื่อ HR ประกาศผลแล้ว)<br><span style="font-size:12px;color:var(--text-muted)">Final score (shown only after HR releases results)</span></td></tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="note note-info">
+      <strong>💡 หมายเหตุ:</strong> คะแนน Final จะแสดงเป็น <span class="chip chip-gray">⏳ รอประกาศผล</span> จนกว่า HR จะดำเนินการส่งผล
+      <span class="en">The Final score will show <strong>⏳ Pending Release</strong> until HR officially releases the results.</span>
+    </div>
+  </div>
+
+  <!-- Section 3: Self Eval -->
+  <div class="section" id="s3">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">
+        การประเมินตนเอง
+        <small>Self Evaluation</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📋</span> การเข้าหน้าประเมิน / Accessing the Evaluation Page</div>
+      <p>กดเมนู <span class="chip chip-blue">ประเมินตนเอง</span> ที่แถบเมนูด้านซ้าย ระบบจะแสดงแบบฟอร์มหัวข้อการประเมินที่กำหนดตามระดับของท่าน</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:6px;">Click <strong>ประเมินตนเอง</strong> (Self Evaluation) in the left menu. The system will display evaluation topics tailored to your position level.</p>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">⭐</span> การให้คะแนน / Scoring</div>
+      <p>แต่ละหัวข้อจะมี slider ให้เลือกคะแนนตั้งแต่ 1 ถึง 5 โดยมีความหมายดังนี้</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;margin-bottom:12px;">Each topic has a slider to select a score from 1 to 5, with the following meanings:</p>
+      <div class="table-wrap">
+        <table>
+          <tr><th style="width:80px;">คะแนน<br>Score</th><th>ความหมาย (ไทย)</th><th>Meaning (EN)</th></tr>
+          <tr>
+            <td><span class="score-badge" style="background:#4a148c;color:#fff;font-size:14px;">1</span></td>
+            <td><strong>แทบไม่มีการแสดงออกหรือสังเกตเห็นพฤติกรรมนั้นเลย</strong></td>
+            <td>Action can hardly be observed</td>
+          </tr>
+          <tr>
+            <td><span class="score-badge" style="background:#c62828;color:#fff;font-size:14px;">2</span></td>
+            <td><strong>มีการแสดงออกหรือพยายามทำ แต่ยังไม่เหมาะสมหรือยังไม่ได้คุณภาพ</strong></td>
+            <td>Action is demonstrated but in an inappropriate manner</td>
+          </tr>
+          <tr>
+            <td><span class="score-badge" style="background:#e65100;color:#fff;font-size:14px;">3</span></td>
+            <td><strong>ปฏิบัติตนได้อย่างเหมาะสม</strong></td>
+            <td>Takes appropriate actions</td>
+          </tr>
+          <tr>
+            <td><span class="score-badge" style="background:#1565c0;color:#fff;font-size:14px;">4</span></td>
+            <td><strong>ปฏิบัติตนอย่างเหมาะสมอยู่เสมอในสถานการณ์ต่างๆ</strong></td>
+            <td>Always takes appropriate actions in various situations</td>
+          </tr>
+          <tr>
+            <td><span class="score-badge" style="background:#2e7d32;color:#fff;font-size:14px;">5</span></td>
+            <td><strong>ปฏิบัติตนอย่างเหมาะสมอยู่เสมอ และได้รับการยกย่องให้เป็นแบบอย่างที่ดี</strong></td>
+            <td>Always takes appropriate actions and is regarded as a role model</td>
+          </tr>
+        </table>
+      </div>
+      <div class="note note-info" style="margin-top:10px;">
+        <strong>💡 เคล็ดลับ:</strong> เมื่อกดเลือกคะแนน ระบบจะแสดงคำอธิบายความหมายของคะแนนนั้นๆ ด้านล่างของปุ่ม ช่วยให้ท่านตรวจสอบและปรับคะแนนได้อย่างเหมาะสม
+        <span class="en">When you select a score, the system will display a description of that score level below the buttons, helping you review and adjust your score appropriately.</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📈</span> แถบความคืบหน้า / Progress Bar</div>
+      <p>แถบสีน้ำเงินด้านบนของหน้าจะแสดงเปอร์เซ็นต์ความคืบหน้าในการกรอกแบบฟอร์ม ท่านจะสามารถกดส่งได้เมื่อกรอกครบทุกหัวข้อแล้ว (100%)</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;">The blue progress bar at the top shows your completion percentage. You can submit only when all topics are completed (100%).</p>
+    </div>
+
+    <div class="note note-warn">
+      <strong>⚠️ ข้อควรระวัง:</strong> หากเลย Deadline ที่กำหนดแล้ว ระบบจะปิดการส่งการประเมินและแสดงข้อความ 🔒 เลย Deadline แล้ว
+      <span class="en">If the deadline has passed, the system will lock the submission and display 🔒 Deadline Passed.</span>
+    </div>
+  </div>
+
+  <!-- Section 4: Save & Submit -->
+  <div class="section" id="s4">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">
+        การบันทึกและส่งการประเมิน
+        <small>Save & Submit</small>
+      </div>
+    </div>
+
+    <div class="note note-warn">
+      <strong>⚠️ ข้อควรทราบ:</strong> ระบบ<u>ไม่มีการบันทึกคะแนนระหว่างประเมิน</u> — ต้องกดปุ่ม "ส่งการประเมิน" เท่านั้นถึงจะบันทึกข้อมูล กรุณากรอกให้ครบในครั้งเดียว
+      <span class="en">The system does <u>not save scores during evaluation</u>. You must click "Submit Evaluation" to record your scores. Please complete all topics in one session.</span>
+    </div>
+    <div class="card">
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-th">กรอกคะแนนในทุกหัวข้อให้ครบถ้วนในครั้งเดียว</div>
+            <div class="step-en">Fill in scores for all evaluation topics in one session.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-th">ตรวจสอบคะแนนให้ถูกต้องครบถ้วน แถบความคืบหน้าต้องแสดง 100%</div>
+            <div class="step-en">Review all scores. The progress bar must show 100% before you can submit.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-th">กดปุ่ม <span class="chip chip-green">ส่งการประเมิน</span> เพื่อยืนยันและบันทึกคะแนนทั้งหมด</div>
+            <div class="step-en">Click <strong>Submit Evaluation</strong> to confirm and record all your scores.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-th">ระบบจะแจ้งเตือนหัวหน้าของท่านโดยอัตโนมัติเพื่อดำเนินการประเมินต่อ</div>
+            <div class="step-en">The system will automatically notify your supervisor to proceed with their evaluation.</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="note note-success">
+      <strong>✅ หลังส่งแล้ว:</strong> ท่านสามารถดูคะแนนที่ส่งไปได้ที่หน้า "ผลการประเมินของฉัน" แต่จะไม่สามารถแก้ไขหรือส่งใหม่ได้อีก
+      <span class="en">After submission, you can view your submitted scores on the "My Results" page. Editing or resubmission is not possible.</span>
+    </div>
+  </div>
+
+  <!-- Section 5: Inbox -->
+  <div class="section" id="s5">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">
+        กล่องจดหมาย
+        <small>Inbox</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📬</span> การใช้งานกล่องจดหมาย / Using the Inbox</div>
+      <p>กล่องจดหมายจะรับการแจ้งเตือนจาก HR และระบบโดยอัตโนมัติ เช่น</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;margin-bottom:12px;">The inbox receives automatic notifications from HR and the system, such as:</p>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <span class="chip chip-blue">📢 เปิดรอบการประเมิน</span>
+        <span class="chip chip-gold">⏰ แจ้งเตือน Deadline ใกล้</span>
+        <span class="chip chip-green">🏆 ผลการประเมินพร้อมแล้ว</span>
+      </div>
+      <p>กดที่ข้อความเพื่ออ่านรายละเอียด และกดลิงก์เพื่อไปยังหน้าที่เกี่ยวข้องได้โดยตรง</p>
+      <p class="lang-en" style="font-size:13px;color:var(--text-muted);margin-top:4px;">Click any message to read details and follow the link to navigate directly to the relevant page.</p>
+    </div>
+  </div>
+
+  <!-- Section 6: My Results -->
+  <div class="section" id="s6">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">
+        ผลการประเมินของฉัน
+        <small>My Results</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title"><span class="icon">📑</span> ข้อมูลที่แสดงในหน้าผลการประเมิน / Result Page Content</div>
+      <div class="table-wrap">
+        <table>
+          <tr><th>ส่วน / Section</th><th>รายละเอียด / Detail</th><th>สถานะ / Status</th></tr>
+          <tr>
+            <td><strong>Self Score</strong></td>
+            <td>คะแนนที่ท่านประเมินตนเอง / Your self-evaluation score</td>
+            <td><span class="chip chip-green">แสดงทันที / Shown immediately</span></td>
+          </tr>
+          <tr>
+            <td><strong>Final Score & Grade</strong></td>
+            <td>คะแนนสุดท้ายและ Grade / Final score and grade</td>
+            <td><span class="chip chip-gold">รอ HR ประกาศ / After HR releases</span></td>
+          </tr>
+          <tr>
+            <td><strong>กราฟคะแนน / Score Chart</strong></td>
+            <td>คะแนนรายหัวข้อ / Per-topic scores</td>
+            <td><span class="chip chip-green">แสดงทันที / Shown immediately</span></td>
+          </tr>
+          <tr>
+            <td><strong>Comment</strong></td>
+            <td>ความคิดเห็นจาก Final Evaluator / Final Evaluator's comments</td>
+            <td><span class="chip chip-gold">รอ HR ประกาศ / After HR releases</span></td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <div class="note note-info">
+      <strong>💡 หมายเหตุ:</strong> ก่อน HR ประกาศผล ส่วน Final จะแสดงเป็น ⏳ รอประกาศผล ซึ่งเป็นเรื่องปกติ ไม่ใช่ข้อผิดพลาด
+      <span class="en">Before HR releases results, the Final section will show ⏳ Pending Release — this is normal, not an error.</span>
+    </div>
+  </div>
+
+  <!-- Section 7: Change Password -->
+  <div class="section" id="s7">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">
+        การเปลี่ยนรหัสผ่าน
+        <small>Change Password</small>
+      </div>
+    </div>
+
+    <div class="card">
+      <ul class="steps">
+        <li>
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-th">กดปุ่ม 🔑 ที่มุมล่างซ้ายของแถบเมนู ข้างปุ่มออกจากระบบ</div>
+            <div class="step-en">Click the 🔑 button at the bottom-left of the sidebar, next to the Logout button.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-th">กรอกรหัสผ่านเดิม และรหัสผ่านใหม่ 5 ตัวอักษร พร้อมยืนยัน</div>
+            <div class="step-en">Enter your current password, then your new 5-character password and confirm it.</div>
+          </div>
+        </li>
+        <li>
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-th">กดปุ่ม <span class="chip chip-blue">บันทึก / Save</span> ระบบจะบันทึกรหัสผ่านใหม่ทันที</div>
+            <div class="step-en">Click <strong>Save</strong>. The system will update your password immediately.</div>
+          </div>
+        </li>
+      </ul>
+    </div>
+
+    <div class="note note-warn">
+      <strong>⚠️ ข้อควรระวัง:</strong> รหัสผ่านต้องมี 5 ตัวอักษรเท่านั้น หากลืมรหัสผ่านใหม่ให้ติดต่อ HR เพื่อรีเซ็ต
+      <span class="en">Password must be exactly 5 characters. If you forget your new password, contact HR to reset it.</span>
+    </div>
+  </div>
+
+  <!-- Section 8: FAQ -->
+  <div class="section" id="s8">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div class="section-title">
+        คำถามที่พบบ่อย
+        <small>Frequently Asked Questions</small>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        กดปุ่มเข้าสู่ระบบแล้วไม่มีอะไรเกิดขึ้น
+        <span class="en">I click Login but nothing happens.</span>
+      </div>
+      <div class="faq-a">
+        ระบบกำลังโหลดข้อมูลในพื้นหลัง กรุณารอสักครู่แล้วกดปุ่มเข้าสู่ระบบอีกครั้ง หากเกิน 30 วินาทีแล้วยังไม่ได้ ลองรีเฟรชหน้าจอ (F5)
+        <span class="en">The system is loading data in the background. Please wait a moment and try again. If it still doesn't work after 30 seconds, try refreshing the page (F5).</span>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        ไม่เห็นเมนู "ประเมินตนเอง" ในแถบเมนู
+        <span class="en">I cannot see the "Self Evaluation" menu.</span>
+      </div>
+      <div class="faq-a">
+        มีสาเหตุได้ 2 กรณี คือ (1) HR ได้ยกเว้นท่านจากการประเมินตนเองในรอบนี้ หรือ (2) Deadline การประเมินตนเองได้ผ่านพ้นไปแล้ว กรุณาติดต่อ HR เพื่อยืนยัน
+        <span class="en">There are 2 possible reasons: (1) HR has exempted you from self-evaluation this round, or (2) the self-evaluation deadline has passed. Please contact HR to confirm.</span>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        บันทึกการประเมินแล้ว แต่ไม่แน่ใจว่าข้อมูลถูกบันทึกหรือเปล่า
+        <span class="en">I saved my evaluation but I'm not sure if it was actually saved.</span>
+      </div>
+      <div class="faq-a">
+        หลังกดบันทึกสำเร็จ ระบบจะแสดง toast notification ที่มุมหน้าจอ นอกจากนี้ท่านสามารถออกจากระบบแล้วเข้าใหม่ คะแนนที่บันทึกไว้จะยังคงอยู่
+        <span class="en">After a successful save, the system shows a toast notification on screen. You can also log out and log back in — your saved scores will still be there.</span>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        ระบบแจ้งว่า "เลย Deadline แล้ว" แต่ยังไม่ได้ส่ง
+        <span class="en">The system shows "Deadline Passed" but I haven't submitted yet.</span>
+      </div>
+      <div class="faq-a">
+        เมื่อ Deadline ผ่านพ้นแล้ว ระบบจะล็อกไม่ให้ส่งการประเมินอีก กรุณาติดต่อ HR ทันทีเพื่อพิจารณาแก้ไขเป็นรายกรณี
+        <span class="en">Once the deadline has passed, the system locks submissions. Please contact HR immediately to discuss on a case-by-case basis.</span>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        Final Score ยังไม่แสดง แสดงแค่ "รอประกาศผล"
+        <span class="en">Final Score is not showing, only "Pending Release".</span>
+      </div>
+      <div class="faq-a">
+        ผลการประเมิน Final จะแสดงเมื่อ HR ดำเนินการประกาศผลอย่างเป็นทางการแล้ว กรุณารอการแจ้งเตือนในกล่องจดหมายของท่าน
+        <span class="en">The Final score will be visible only after HR officially releases the results. Please wait for a notification in your inbox.</span>
+      </div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">
+        ลืมรหัสผ่าน / Forgot password
+        <span class="en">I forgot my password.</span>
+      </div>
+      <div class="faq-a">
+        ติดต่อฝ่าย HR เพื่อรีเซ็ตรหัสผ่านกลับเป็นเลข 5 หลักสุดท้ายของบัตรประชาชน
+        <span class="en">Contact the HR department to reset your password to the last 5 digits of your national ID.</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  <strong>Akara Resources</strong> — KPI Performance Appraisal Review 2026<br>
+  สอบถามเพิ่มเติมติดต่อ HR / For further assistance, contact HR
+</div>
+
+</body>
+</html>
