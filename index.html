@@ -1514,9 +1514,10 @@ function syncUser(empId) {
     email: u.email || '',
   });
 }
-function syncEval(empId) {
+function syncEval(empId, retryCount) {
   const e = evalStore[empId]; if (!e) return;
-  gasRun('saveEval', {
+  retryCount = retryCount || 0;
+  var payload = {
     emp_id: empId,
     self_total:  e.selfTotal  || '',
     s_total:     e.sTotal     || '',
@@ -1528,6 +1529,23 @@ function syncEval(empId) {
     self_scores:  e.selfScores  || null,
     s_scores:     e.sScores     || null,
     final_scores: e.finalScores || null,
+  };
+  gasRun('saveEval', payload).then(function(r) {
+    if (!r || !r.ok) {
+      if (retryCount < 3) {
+        // retry อัตโนมัติ หลังรอ 3 วิ
+        setTimeout(function() { syncEval(empId, retryCount + 1); }, 3000);
+        if (retryCount === 0) showToast(currentLang==='th'?'⏳ กำลังบันทึก...':'⏳ Saving...');
+      } else {
+        showToast(currentLang==='th'?'⚠️ บันทึกไม่สำเร็จ กรุณาลองใหม่':'⚠️ Save failed. Please try again.', 'error');
+      }
+    }
+  }).catch(function() {
+    if (retryCount < 3) {
+      setTimeout(function() { syncEval(empId, retryCount + 1); }, 3000);
+    } else {
+      showToast(currentLang==='th'?'⚠️ บันทึกไม่สำเร็จ กรุณาลองใหม่':'⚠️ Save failed. Please try again.', 'error');
+    }
   });
 }
 function syncInbox(uid) {
@@ -2430,8 +2448,16 @@ function renderSelfEvalPage(){
     }
   }
   selfScores=eData.selfScores?JSON.parse(JSON.stringify(eData.selfScores)):{};
-  document.getElementById('self-eval-title').textContent=(""+(t('self-eval'))+" – "+(userName(u))+"");
-  document.getElementById('self-eval-subtitle').textContent=(""+(t('level'))+": "+(u.displayLevel||u.level)+" | "+(t('dept'))+": "+(u.dept?u.dept[currentLang]:'—')+" | "+(t('pos'))+": "+(u.position?u.position[currentLang]:'—')+"");
+
+  // restore auto-save ถ้ายังไม่ได้ submit
+  if (!eData.selfTotal) {
+    var restored = restoreAutoSave();
+    if (restored && Object.keys(restored).length > 0) {
+      selfScores = restored;
+      showToast(currentLang==='th'?'📝 โหลดข้อมูลที่ทำค้างไว้':'📝 Draft restored from last session');
+    }
+  }
+
   buildEvalSections('self-eval-sections',u.level,selfScores,'self');
   updateSelfProgress();showPage('page-self-eval');
 }
@@ -2491,6 +2517,7 @@ function selectScoreItem(prefix,si,ii,score,lk){
   if(prefix==='self')updateSelfProgress();else updateSubProgress(lk);
 }
 function updateSelfProgress(){
+  if (arguments.length === 0) scheduleAutoSave(); // auto-save เมื่อ progress update
   const lk=currentUser.level;const total=totalItems(lk);const answered=countAnswered(selfScores);
   document.getElementById('progress-label').textContent=(""+(t('answered'))+" "+(answered)+"/"+(total)+"");
   document.getElementById('eval-progress').style.width=(answered/total*100)+'%';
@@ -2510,6 +2537,7 @@ function submitSelfEval(){
   evalStore[currentUser.id].selfScores=JSON.parse(JSON.stringify(selfScores));
   evalStore[currentUser.id].selfTotal=score;
   setUnsaved(false);
+  clearAutoSave(); // ลบ draft หลัง submit สำเร็จ
   syncEval(currentUser.id);
   const grade=getGrade(score);showToast((""+(t('self-eval-saved'))+" – "+(grade.letter)+" ("+(score.toFixed(2))+")"),'success');
   const supId=currentUser.supervisorId;
@@ -4881,6 +4909,50 @@ function parseDeadlineDate(val) {
   var d = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]), 23, 59, 59, 999);
   return isNaN(d.getTime()) ? null : d;
 }
+
+
+// ── AUTO-SAVE SELF EVAL ──────────────────────────────────────────
+var _autoSaveTimer = null;
+
+function autoSaveSelfScores() {
+  if (!currentUser || !selfScores) return;
+  try {
+    var key = 'kpi_autosave_' + currentUser.id;
+    localStorage.setItem(key, JSON.stringify({
+      scores: selfScores,
+      ts: Date.now()
+    }));
+  } catch(e) {}
+}
+
+function scheduleAutoSave() {
+  if (_autoSaveTimer) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(autoSaveSelfScores, 2000); // บันทึกหลังหยุดกด 2 วิ
+}
+
+function restoreAutoSave() {
+  if (!currentUser) return false;
+  try {
+    var key = 'kpi_autosave_' + currentUser.id;
+    var saved = localStorage.getItem(key);
+    if (!saved) return false;
+    var obj = JSON.parse(saved);
+    // ใช้ได้แค่ถ้าบันทึกไว้ไม่เกิน 24 ชั่วโมง
+    if (Date.now() - obj.ts > 86400000) {
+      localStorage.removeItem(key);
+      return false;
+    }
+    return obj.scores;
+  } catch(e) { return false; }
+}
+
+function clearAutoSave() {
+  if (!currentUser) return;
+  try {
+    localStorage.removeItem('kpi_autosave_' + currentUser.id);
+  } catch(e) {}
+}
+// ─────────────────────────────────────────────────────────────────
 
 var SELF_DEADLINE = null;
 var SLEVEL_DEADLINE = null;
