@@ -2626,6 +2626,9 @@ function openSubEval(subId, readOnly){
     subScores = JSON.parse(JSON.stringify(eData.finalScores));
   } else if(currentUser.isFinal && eData.sScores) {
     subScores = JSON.parse(JSON.stringify(eData.sScores));
+  } else if(currentUser.isFinal && sub.skipSLevel && eData.selfScores) {
+    // ไม่มี S-Level เพราะถูก skip → ใช้ selfScores เป็นจุดเริ่มต้น
+    subScores = JSON.parse(JSON.stringify(eData.selfScores));
   } else if(!currentUser.isFinal && eData.selfScores) {
     subScores = JSON.parse(JSON.stringify(eData.selfScores));
   } else {
@@ -2641,8 +2644,14 @@ function openSubEval(subId, readOnly){
     :("<p style=\"color:var(--text-muted);\">"+(currentLang==='th'?'ยังไม่มีข้อมูล Self Eval':'No self-evaluation data')+"</p>");
   buildEvalSections('sub-eval-sections',sub.level,subScores,'sub');
   updateSubProgress(sub.level);
-  const chk=document.getElementById('chk-special');if(chk)chk.checked=false;
-  const rb=document.getElementById('special-reason-box');if(rb)rb.style.display='none';
+  const chk=document.getElementById('chk-special');
+  if(chk){
+    chk.checked=!!(eData.specialAdj);
+    const rb=document.getElementById('special-reason-box');
+    if(rb) rb.style.display=eData.specialAdj?'block':'none';
+    const rt=document.getElementById('special-reason');
+    if(rt) rt.value=eData.specialReason||'';
+  }
   showPage('page-eval-sub');
 }
 function toggleSpecialReason(){const c=document.getElementById('chk-special');document.getElementById('special-reason-box').style.display=c.checked?'block':'none';}
@@ -2665,7 +2674,8 @@ function submitSubEval(){
     evalStore[currentSubId].finalTotal=score;
     if(commentText) evalStore[currentSubId].finalComment=commentText;
     const chk=document.getElementById('chk-special');
-    if(chk&&chk.checked){evalStore[currentSubId].specialAdj=true;evalStore[currentSubId].specialReason=document.getElementById('special-reason').value;}
+    evalStore[currentSubId].specialAdj = !!(chk && chk.checked);
+    evalStore[currentSubId].specialReason = (chk && chk.checked) ? (document.getElementById('special-reason').value||'') : '';
     Object.keys(USERS).filter(function(uid){ return USERS[uid].isHR && !USERS[uid].inactive; }).forEach(function(hrId) {
       addInboxMsg(hrId,{from:currentLang==='th'?'ระบบ KPI':'KPI System',subject:("Final Eval – "+(userName(sub))+""),body:(""+(t('score'))+": "+(score.toFixed(2))+" ("+(getGrade(score).label)+")"),link:'page-hr-report'});
     });
@@ -4185,11 +4195,16 @@ function renderSLevelSummary() {
 
   // Sections detail
   const sectionsEl = document.getElementById('sub-slevel-sections');
-  if (!sectionsEl || !eData.sScores) { 
-    if (sectionsEl && !eData.sScores) sectionsEl.innerHTML = '';
-    return; 
+  // ถ้า skip S-Level ให้แสดง Self scores แทน พร้อม label บอก
+  const scoresSource = eData.sScores || (u.skipSLevel ? eData.selfScores : null);
+  if (!sectionsEl || !scoresSource) {
+    if (sectionsEl && !scoresSource) sectionsEl.innerHTML = '';
+    return;
   }
-  const sScoresData = JSON.parse(JSON.stringify(eData.sScores));
+  if (!eData.sScores && u.skipSLevel && summaryEl && !eData.sTotal) {
+    summaryEl.innerHTML = '<p style="color:#e67e22;font-size:13px;">⚡ พนักงานนี้ถูกยกเว้น S-Level — แสดงคะแนน Self Eval แทน</p>';
+  }
+  const sScoresData = JSON.parse(JSON.stringify(scoresSource));
   const secs = EVAL_DATA[u.level] ? EVAL_DATA[u.level].sections : [];
   let html = '';
 
