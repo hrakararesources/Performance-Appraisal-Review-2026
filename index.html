@@ -1865,6 +1865,12 @@ function showEmpProposals(empId) {
 function renderProposalList() {
   var wrap = document.getElementById('proposal-list-wrap');
   if (!wrap) return;
+  // ถ้า proposalStore ว่างอยู่ให้โหลดใหม่จาก server ก่อน
+  if (proposalStore.length === 0) {
+    wrap.innerHTML = '<p style="color:var(--text-muted);padding:2rem;text-align:center;">⏳ กำลังโหลด...</p>';
+    loadProposals().then(function() { renderProposalList(); });
+    return;
+  }
   var ft = (document.getElementById('proposal-filter-type')||{}).value || '';
   var list = proposalStore.filter(function(p){
     var ptype = p.proposal_type==='special_adjustment'?'special':p.proposal_type;
@@ -4377,24 +4383,41 @@ function openProposalForm(empId) {
   document.getElementById('pb-current-pos').textContent = u.position ? (u.position.th + ' / ' + u.position.en) : '—';
   document.getElementById('pb-new-pos').value = '';
 
-  // Reset radio
-  document.getElementById('pb-special').checked = true;
+  // โหลดข้อมูลเดิมถ้ามี proposal อยู่แล้ว
+  var existingProp = proposalStore.find(function(x){ return x.emp_id === empId; });
+  if (existingProp) {
+    var isPromo = existingProp.proposal_type === 'promotion';
+    document.getElementById(isPromo ? 'pb-promotion' : 'pb-special').checked = true;
+    if (document.getElementById('pb-new-pos')) document.getElementById('pb-new-pos').value = existingProp.proposed_position || '';
+    if (document.getElementById('pc-strengths')) document.getElementById('pc-strengths').value = existingProp.key_strengths || '';
+    if (document.getElementById('pc-develop')) document.getElementById('pc-develop').value = existingProp.to_be_developed || '';
+    if (document.getElementById('pd-achievement')) document.getElementById('pd-achievement').value = existingProp.achievement || '';
+    if (document.getElementById('pd-project')) document.getElementById('pd-project').value = existingProp.special_project || '';
+    if (document.getElementById('pe-expectation')) document.getElementById('pe-expectation').value = existingProp.expectation || '';
+  } else {
+    document.getElementById('pb-special').checked = true;
+    ['pc-strengths','pc-develop','pd-achievement','pd-project','pe-expectation'].forEach(function(id) {
+      var el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+  }
   toggleProposalType();
-
-  // Clear fields
-  ['pc-strengths','pc-develop','pd-achievement','pd-project','pe-expectation'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
   showPage('page-proposal');
 }
 
 function toggleProposalType() {
   var isPromotion = document.getElementById('pb-promotion') && document.getElementById('pb-promotion').checked;
   document.getElementById('pb-position-block').style.display = isPromotion ? 'grid' : 'none';
-  document.getElementById('pc-block').style.display = isPromotion ? 'block' : 'none';
-  document.getElementById('pe-block').style.display = isPromotion ? 'block' : 'none';
+  // Special Adjustment ก็แสดงทุก field เหมือนกัน เพียงแต่ label ต่างกัน
+  document.getElementById('pc-block').style.display = 'block';
+  document.getElementById('pe-block').style.display = 'block';
+  // ปรับ label ตาม type
+  var pcTitle  = document.getElementById('pc-block-title');
+  var pdTitle  = document.getElementById('pd-block-title');
+  var peTitle  = document.getElementById('pe-block-title');
+  if (pcTitle) pcTitle.textContent = isPromotion ? 'Part C: จุดแข็งและพัฒนา' : 'Part B: รายละเอียดและจุดแข็ง';
+  if (pdTitle) pdTitle.textContent = isPromotion ? 'Part D: ผลงานและโครงการ' : 'Part C: ผลงานที่โดดเด่น';
+  if (peTitle) peTitle.textContent = isPromotion ? 'Part E: ความคาดหวัง' : 'Part D: เหตุผลและความคาดหวัง';
 }
 
 function saveProposalForm() {
@@ -4417,11 +4440,31 @@ function saveProposalForm() {
   if (lastPromo && USERS[currentProposalEmpId]) {
     USERS[currentProposalEmpId].lastPromotion = lastPromo;
   }
+  // ป้องกันส่งซ้ำ — ถ้ามี proposal ของคนนี้อยู่แล้ว ให้ confirm ก่อน
+  var existing = proposalStore.filter(function(x){ return x.emp_id === currentProposalEmpId; });
+  if (existing.length > 0) {
+    var empName = USERS[currentProposalEmpId] ? (USERS[currentProposalEmpId].name[currentLang] || USERS[currentProposalEmpId].name.th) : currentProposalEmpId;
+    var confirmMsg = currentLang === 'th'
+      ? empName + ' มีข้อเสนออยู่แล้ว ต้องการเขียนทับด้วยข้อมูลใหม่หรือไม่?'
+      : empName + ' already has a proposal. Overwrite with new data?';
+    if (!confirm(confirmMsg)) return;
+    proposalStore = proposalStore.filter(function(x){ return x.emp_id !== currentProposalEmpId; });
+  }
+  var _submitBtn = document.querySelector('#page-proposal .btn-primary');
+  if (_submitBtn) { _submitBtn.disabled = true; _submitBtn.textContent = '⏳ ' + (currentLang==='th'?'กำลังบันทึก...':'Saving...'); }
+
   gasRun('saveProposal', data).then(function(r) {
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.textContent = currentLang==='th'?'💾 บันทึก / Save':'💾 Save'; }
     if (r && r.ok) {
-      showToast(currentLang === 'th' ? 'บันทึกเรียบร้อย' : 'Saved successfully', 'success');
+      // อัปเดต proposalStore local ทันที — ป้องกัน Final กดซ้ำเพราะไม่เห็น record
+      data.id = r.id;
+      data.created_at = new Date().toISOString();
+      proposalStore = proposalStore.filter(function(x){ return x.emp_id !== currentProposalEmpId; });
+      proposalStore.push(data);
+      showToast(currentLang === 'th' ? '✅ บันทึกเรียบร้อย' : '✅ Saved successfully', 'success');
     }
   }).catch(function(e) {
+    if (_submitBtn) { _submitBtn.disabled = false; _submitBtn.textContent = currentLang==='th'?'💾 บันทึก / Save':'💾 Save'; }
     showToast('Error: ' + e.message, 'error');
   });
 }
