@@ -2807,7 +2807,7 @@ function renderHrEmpList(){
       :("<button class=\"btn btn-sm btn-outline\" style=\"color:var(--danger);border-color:var(--danger);\" onclick=\"confirmDeactivate('"+(id)+"')\">"+(currentLang==='th'?'ปิดใช้':'Deactivate')+"</button>");
     const deptDisplay=u.dept?(u.dept[currentLang]||u.dept.th||'—'):'—';
     const posDisplay=u.position?(u.position[currentLang]||u.position.th||'—'):'—';
-    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.displayLevel||u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSelf?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSelf?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSelf('"+(id)+"')\">"+(u.skipSelf?(currentLang==='th'?'✓ ข้าม Self':'✓ Skip Self'):(currentLang==='th'?'ข้าม Self':'Skip Self'))+"</button>")+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
+    return ("<tr class=\""+(isInactive?'emp-inactive':'')+"\"><td style=\"font-family:monospace;font-size:12px;\">"+(id)+"</td><td><b>"+(inactiveBadge)+""+(userName(u))+"</b></td><td>"+(deptDisplay)+"</td><td>"+(posDisplay)+"</td><td>"+(u.startDate?tenureLabel(u.startDate):'—')+"</td><td><span class=\"badge "+(isInactive?'badge-inactive':'badge-blue')+"\">"+(u.displayLevel||u.level||'—')+"</span></td><td>"+(supName)+"</td><td><span class=\"badge "+(sc)+"\">"+(status[currentLang])+"</span></td><td style=\"display:flex;gap:6px;flex-wrap:wrap;\"><button class=\"btn btn-sm btn-outline\" onclick=\"viewEmpReport('"+(id)+"')\">"+(currentLang==='th'?'ดูผล':'View')+"</button>"+(deactBtn)+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSelf?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSelf?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSelf('"+(id)+"')\">"+(u.skipSelf?(currentLang==='th'?'✓ ข้าม Self':'✓ Skip Self'):(currentLang==='th'?'ข้าม Self':'Skip Self'))+"</button>")+("<button class=\"btn btn-sm btn-outline\" style=\"font-size:11px;color:"+(u.skipSLevel?'#27ae60':'#7f8c8d')+";border-color:"+(u.skipSLevel?'#27ae60':'#bdc3c7')+";\" onclick=\"toggleSkipSLevel('"+(id)+"')\">"+(u.skipSLevel?(currentLang==='th'?'✓ ข้าม SLevel':'✓ Skip SLevel'):(currentLang==='th'?'ข้าม SLevel':'Skip SLevel'))+"</button>")+"<button class=\"btn btn-sm\" style=\"background:#FEF2F2;color:#DC2626;border:1.5px solid #FECACA;\" onclick=\"showResetMenu('"+(id)+"')\">"+(currentLang==='th'?'รีเซ็ต':'Reset')+"</button></td></tr>");
   }).join('');
 }
 function openAddEmpModal(){document.getElementById('modal-add-emp').classList.remove('hidden');}
@@ -4773,6 +4773,7 @@ async function toggleSkipSelf(empId) {
       last_promotion: u.lastPromotion || '',
       email: u.email || '',
       skip_self: newVal,
+      skip_slevel: u.skipSLevel || false,
     });
     showToast(newVal
       ? (currentLang==='th'?'✅ '+name+' ไม่ต้องประเมินตนเองแล้ว':'✅ '+name+' exempted from self eval')
@@ -4780,6 +4781,46 @@ async function toggleSkipSelf(empId) {
     renderHrEmpList();
   } catch(e) {
     u.skipSelf = !newVal; // revert
+    showToast('❌ ' + e.message);
+  }
+}
+// ─────────────────────────────────────────────────────────────────
+
+async function toggleSkipSLevel(empId) {
+  var u = USERS[empId];
+  if (!u) return;
+  var newVal = !u.skipSLevel;
+  var name = userName(u);
+  var msg = newVal
+    ? (currentLang==='th' ? name+' จะไม่ต้องรับการประเมินจาก S-Level ยืนยัน?' : 'Exempt '+name+' from S-Level eval?')
+    : (currentLang==='th' ? 'ยกเลิกการยกเว้น S-Level ของ '+name+' ยืนยัน?' : 'Remove S-Level exemption for '+name+'?');
+  if (!confirm(msg)) return;
+  u.skipSLevel = newVal;
+  try {
+    await gasRun('saveUser', {
+      emp_id: empId,
+      name_th: u.name.th, name_en: u.name.en,
+      pass: u.pass,
+      dept_th: u.dept.th, dept_en: u.dept.en,
+      position_th: u.position.th, position_en: u.position.en,
+      level: u.level,
+      start_date: u.startDate ? String(u.startDate).substring(0,10) : '',
+      supervisor_id: u.supervisorId || '',
+      final_id: u.finalId || '',
+      is_final: u.isFinal || false,
+      is_hr: u.isHR || false,
+      inactive: u.inactive || false,
+      last_promotion: u.lastPromotion || '',
+      email: u.email || '',
+      skip_self: u.skipSelf || false,
+      skip_slevel: newVal,
+    });
+    showToast(newVal
+      ? (currentLang==='th'?'✅ '+name+' ไม่ต้องรับการประเมิน S-Level แล้ว':'✅ '+name+' exempted from S-Level eval')
+      : (currentLang==='th'?'↩️ ยกเลิกการยกเว้น S-Level ของ '+name+' แล้ว':'↩️ S-Level exemption removed for '+name));
+    renderHrEmpList();
+  } catch(e) {
+    u.skipSLevel = !newVal; // revert
     showToast('❌ ' + e.message);
   }
 }
