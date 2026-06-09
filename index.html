@@ -2559,12 +2559,12 @@ function renderEvalOthers(){
     const selfDone = !!eData.selfTotal;
     const myDone   = currentUser.isFinal ? !!eData.finalTotal : !!eData.sTotal;
     const evalBtn  = currentUser.isFinal
-      ? (!!eData.sTotal || isSLevelLocked())
+      ? (!!eData.sTotal || isSLevelLocked() || !!sub.skipSLevel)
       : (selfDone || isSelfLocked());
     const proposeBtn = currentUser.isFinal
       ? `<button class="btn btn-sm" style="background:#e67e22;color:white;font-size:11px;margin-left:4px;" onclick="openProposalForm('${sid}')">${currentLang==='th'?'เสนอปรับ':'Propose'}</button>`
       : '';
-    const selfBadge = (selfDone || isDeadlinePassed()) && (currentUser.isFinal ? (eData.sTotal || isSLevelDeadlinePassed()) : true)
+    const selfBadge = (selfDone || isDeadlinePassed()) && (currentUser.isFinal ? (eData.sTotal || isSLevelDeadlinePassed() || !!sub.skipSLevel) : true)
       ? `<span class="badge badge-green">✓ ${(eData.selfTotal||0).toFixed(2)}</span>`
       : `<span class="badge badge-gray">${t('wait')}</span>`;
     return `<tr>
