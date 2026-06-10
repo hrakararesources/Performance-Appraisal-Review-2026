@@ -235,6 +235,13 @@ textarea{resize:vertical;min-height:70px;}
 <div class="toast-container" id="toast-container"></div>
 
 <!-- ══════ LOGIN ══════ -->
+
+<!-- ══════ MAINTENANCE ══════ -->
+<div id="screen-maintenance" class="hidden" style="position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,#0d2137 0%,#1a3a5c 50%,#0d4f6e 100%);z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;color:white;text-align:center;padding:2rem;">
+  <div style="font-size:56px;margin-bottom:1rem;">🔧</div>
+  <div style="font-size:24px;font-weight:700;margin-bottom:0.75rem;" id="maintenance-title">ระบบปิดปรับปรุงชั่วคราว</div>
+  <div style="font-size:15px;color:#ccc;max-width:400px;" id="maintenance-msg">กรุณากลับมาใหม่ในอีกสักครู่</div>
+</div>
 <div id="screen-login">
 <div class="login-wrap">
   <div class="login-card">
@@ -371,7 +378,7 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span data-th="รายงาน" data-en="Reports">รายงาน</span>
       </div>
-      <div class="nav-item" onclick="showPage('page-hr-proposals');renderProposalList();">
+      <div class="nav-item" onclick="showPage('page-hr-proposals');loadProposals();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-th="เสนอพิจารณา" data-en="Recommendations">เสนอพิจารณา</span>
       </div>
@@ -1482,6 +1489,14 @@ async function loadFromSheets() {
         var elFL = document.getElementById('setting-final-deadline');
         if (elFL) elFL.value = r.deadlines.final;
       }
+      // maintenance mode
+      if (r.deadlines.maintenanceMode) {
+        MAINTENANCE_MODE = true;
+        MAINTENANCE_MSG    = r.deadlines.maintenanceMsg   || '';
+        MAINTENANCE_MSG_EN = r.deadlines.maintenanceMsgEn || '';
+      } else {
+        MAINTENANCE_MODE = false;
+      }
     }
 
     GAS_READY = true;
@@ -1656,6 +1671,19 @@ function doLogin(){
   const inputPass=pass.padStart(5,'0');
   if(userPass!==inputPass){showToast(currentLang==='th'?'รหัสไม่ถูกต้อง':'Incorrect credentials');return;}
   if(user.inactive){showToast(currentLang==='th'?'บัญชีนี้ถูกปิดใช้งาน กรุณาติดต่อ HR':'This account is deactivated. Please contact HR');return;}
+  // ── Maintenance Mode: HR เข้าได้ปกติ, คนอื่นเห็นหน้า maintenance ──
+  if(MAINTENANCE_MODE && !user.isHR){
+    document.getElementById('screen-login').classList.add('hidden');
+    var ms = document.getElementById('screen-maintenance');
+    ms.classList.remove('hidden');
+    var mt = document.getElementById('maintenance-title');
+    var mm = document.getElementById('maintenance-msg');
+    if(mt) mt.textContent = currentLang==='th' ? 'ระบบปิดปรับปรุงชั่วคราว' : 'System Maintenance';
+    if(mm) mm.textContent = currentLang==='th'
+      ? (MAINTENANCE_MSG    || 'กรุณากลับมาใหม่ในอีกสักครู่')
+      : (MAINTENANCE_MSG_EN || 'Please try again later.');
+    return;
+  }
   currentUser={id,...user};
   document.getElementById('screen-login').classList.add('hidden');
   document.getElementById('screen-app').classList.remove('hidden');
@@ -1785,7 +1813,7 @@ function renderHome(){
     });
   }
   const tl=document.getElementById('eval-timeline');
-  const hasSelf=!!eData.selfTotal,hasSEval=!!eData.sTotal,hasFinal=!!eData.finalTotal;
+  const hasSelf=!!eData.selfTotal,hasSEval=!!(eData.sTotal||currentUser.skipSLevel),hasFinal=!!eData.finalTotal;
   if(tl) tl.innerHTML=("\n    <div class=\"tl-item\"><div class=\"tl-dot done\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('hr-open-round'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(t('done'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSelf?'done':'active')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('self-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSelf?t('done')+' – '+eData.selfTotal.toFixed(2):t('wait'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasSEval?'done':hasSelf?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('s-eval-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasSEval?t('done'):t('wait-eval'))+"</div></div></div>\n    <div class=\"tl-item\"><div class=\"tl-dot "+(hasFinal?'done':hasSEval?'active':'pending')+"\"></div><div><div style=\"font-size:14px;font-weight:600;\">"+(t('final-step'))+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(hasFinal?t('done')+' – '+t('grade')+' '+getGrade(eData.finalTotal).letter:t('wait'))+"</div></div></div>\n  ");
   const gc=document.getElementById('grade-criteria');
   if(gc) gc.innerHTML=GRADES.map(g=>("\n    <div style=\"display:flex;align-items:center;gap:10px;margin-bottom:8px;\">\n      <div style=\"width:36px;height:36px;border-radius:50%;background:"+(g.bg)+";color:"+(g.color)+";display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex-shrink:0;\">"+(g.letter)+"</div>\n      <div style=\"flex:1;\"><div style=\"font-size:13px;font-weight:600;\">"+(g.label)+"</div><div style=\"font-size:12px;color:var(--text-muted);\">"+(g.min.toFixed(2))+" – "+(g.max.toFixed(2))+"</div></div>\n      <div style=\"flex:1;\"><div class=\"progress\"><div class=\"progress-bar\" style=\"width:"+(g.max*20)+"%;background:"+(g.bar)+";\"></div></div></div>\n    </div>")).join('');
@@ -1806,7 +1834,7 @@ function renderHrSummaryCard() {
     if (USERS[id].inactive) return;
     var e = evalStore[id] || {};
     if (e.selfTotal) counts.self++;
-    if (e.sTotal) counts.s++;
+    if (e.sTotal || USERS[id].skipSLevel) counts.s++;
     if (e.finalTotal) counts.final++;
   });
 
@@ -1979,6 +2007,16 @@ function showProposalDetail(propId) {
       ['เหตุผล / ความคาดหวัง',p.expectation||''],
     ]);
   }
+
+  // ── Special Adjust จาก Final Evaluator (ถ้ามี)
+  var eData = evalStore[p.emp_id] || {};
+  if (eData.specialAdj) {
+    html += sec('Special Adjustment (Final Evaluator)',[
+      [currentLang==='th'?'ปรับพิเศษ':'Special Adjust', eData.specialAdj ? (currentLang==='th'?'✅ ใช่':'✅ Yes') : (currentLang==='th'?'ไม่':'No')],
+      [currentLang==='th'?'เหตุผลการปรับพิเศษ':'Reason', eData.specialReason||'—'],
+    ]);
+  }
+
   body.innerHTML = html;
   document.getElementById('modal-proposal-detail').classList.remove('hidden');
 }
@@ -2174,6 +2212,9 @@ function exportFinalReport() {
 // ── GRADE DISTRIBUTION CHART ─────────────────────────────────
 var gradeDistChartInstance = null;
 var proposalStore = [];
+var MAINTENANCE_MODE = false;
+var MAINTENANCE_MSG  = '';
+var MAINTENANCE_MSG_EN = '';
 
 function renderGradeDistChart() {
   if (!currentUser || !currentUser.isFinal) return;
@@ -2244,7 +2285,7 @@ function renderGradeDistChart() {
     var allEmpIds = Object.keys(USERS).filter(function(id){ return !USERS[id].inactive; });
     var totalEmp = allEmpIds.length;
     var selfCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].selfTotal; }).length;
-    var sCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].sTotal; }).length;
+    var sCount = allEmpIds.filter(function(id){ return (evalStore[id] && evalStore[id].sTotal) || (USERS[id] && USERS[id].skipSLevel); }).length;
     var fCount = allEmpIds.filter(function(id){ return evalStore[id] && evalStore[id].finalTotal; }).length;
     var isth = currentLang==='th';
     var steps = [
@@ -2559,7 +2600,12 @@ function submitSelfEval(){
 
 // ── EVAL OTHERS ──
 function renderEvalOthers(){
-  const subs = getMySubordinates(currentUser).filter(sid => USERS[sid] && !USERS[sid].inactive);
+  const subs = getMySubordinates(currentUser).filter(sid => {
+    if (!USERS[sid] || USERS[sid].inactive) return false;
+    // S-Level evaluator ไม่ต้องเห็นคนที่ถูก skip
+    if (!currentUser.isFinal && USERS[sid].skipSLevel) return false;
+    return true;
+  });
   const container = document.getElementById('subordinate-table');
   if (!subs.length) {
     container.innerHTML = ("<p style=\"color:var(--text-muted);padding:1rem;\">" + (currentLang==='th'?'ไม่มีพนักงานที่ต้องประเมิน':'No staff to evaluate') + "</p>");
@@ -2772,7 +2818,7 @@ function renderHrDashboard(){
   const empIds=Object.keys(USERS).filter(id=>!USERS[id].isHR&&!USERS[id].inactive);
   const inactiveCount=Object.keys(USERS).filter(id=>!USERS[id].isHR&&USERS[id].inactive).length;
   let selfDone=0,sDone=0,pFinal=0;const gc={A:0,B:0,C:0,D:0,E:0};
-  empIds.forEach(id=>{const e=evalStore[id]||{};if(e.selfTotal)selfDone++;if(e.sTotal)sDone++;if(e.sTotal&&!e.finalTotal)pFinal++;if(e.finalTotal)gc[getGrade(e.finalTotal).letter]++;});
+  empIds.forEach(id=>{const e=evalStore[id]||{};const skS=USERS[id]&&USERS[id].skipSLevel;if(e.selfTotal)selfDone++;if(e.sTotal||skS)sDone++;if((e.sTotal||skS)&&!e.finalTotal)pFinal++;if(e.finalTotal)gc[getGrade(e.finalTotal).letter]++;});
   document.getElementById('hr-total').textContent=empIds.length+(inactiveCount>0?(" (+"+(inactiveCount)+" inactive)"):'');
   document.getElementById('hr-self-done').textContent=selfDone;
   document.getElementById('hr-s-done').textContent=sDone;
@@ -2820,8 +2866,8 @@ function renderHrEmpList(){
   document.getElementById('hr-emp-list').innerHTML=empIds.map(id=>{
     const u=USERS[id];const supId=u.supervisorId;const supName=supId&&USERS[supId]?userName(USERS[supId]):'—';
     const eData=evalStore[id]||{};
-    const status=eData.finalTotal?{th:'เสร็จสิ้น',en:'Done'}:eData.sTotal?{th:'S-Eval แล้ว',en:'S-Eval Done'}:eData.selfTotal?{th:'Self Eval แล้ว',en:'Self Eval Done'}:{th:'รอ',en:'Pending'};
-    const sc=eData.finalTotal?'badge-green':eData.sTotal?'badge-teal':eData.selfTotal?'badge-amber':'badge-gray';
+    const status=eData.finalTotal?{th:'เสร็จสิ้น',en:'Done'}:(eData.sTotal||u.skipSLevel)?{th:'S-Eval แล้ว',en:'S-Eval Done'}:eData.selfTotal?{th:'Self Eval แล้ว',en:'Self Eval Done'}:{th:'รอ',en:'Pending'};
+    const sc=eData.finalTotal?'badge-green':(eData.sTotal||u.skipSLevel)?'badge-teal':eData.selfTotal?'badge-amber':'badge-gray';
     const isInactive=!!u.inactive;
     const inactiveBadge=isInactive?("<span class=\"badge badge-inactive\">"+(currentLang==='th'?'ปิดใช้งาน':'Inactive')+"</span> "):'';
     const deactBtn=isInactive
@@ -3215,6 +3261,7 @@ function sendBroadcastEmail(type){
       addInboxMsg(id,{from:currentLang==='th'?'ระบบ KPI':'KPI System',
         subject:currentLang==='th'?'แจ้งเตือน: กรุณาประเมินตนเอง':'Reminder: Please complete self-evaluation',
         body:t('not-eval-yet'),link:'page-self-eval'});
+      syncInbox(id);
     });
     showToast(t('send-email-done'),'success');
     updateNotifBadges();
@@ -3232,6 +3279,7 @@ function sendBroadcastEmail(type){
         subject:currentLang==='th'?'แจ้งเตือน: กรุณาประเมิน S-Level':'Reminder: Please complete S-Level evaluation',
         body:currentLang==='th'?'มีพนักงานรอการประเมิน S-Level':'Employees are pending S-Level evaluation',
         link:'page-eval-others'});
+      syncInbox(supId);
     });
     showToast(t('send-email-done'),'success');
     updateNotifBadges();
@@ -3250,6 +3298,7 @@ function sendBroadcastEmail(type){
         subject:currentLang==='th'?'แจ้งเตือน: กรุณาอนุมัติผลการประเมิน':'Reminder: Please complete Final evaluation',
         body:currentLang==='th'?'มีพนักงานรอการอนุมัติ Final Evaluation':'Employees are pending Final approval',
         link:'page-eval-others'});
+      syncInbox(id);
     });
     updateNotifBadges();
 
@@ -4293,7 +4342,8 @@ function renderScoreHistory() {
   if (!u) { container.innerHTML = '<p>ไม่พบข้อมูล</p>'; return; }
 
   const selfScoresData  = eData.selfScores  ? JSON.parse(JSON.stringify(eData.selfScores))  : null;
-  const sScoresData     = eData.sScores     ? JSON.parse(JSON.stringify(eData.sScores))     : null;
+  const sScoresData     = eData.sScores     ? JSON.parse(JSON.stringify(eData.sScores))
+                        : (u.skipSLevel && eData.selfScores ? JSON.parse(JSON.stringify(eData.selfScores)) : null);
   const finalScoresData = eData.finalScores ? JSON.parse(JSON.stringify(eData.finalScores)) : null;
 
   const secs = EVAL_DATA[u.level] ? EVAL_DATA[u.level].sections : [];
@@ -4343,8 +4393,10 @@ function renderScoreHistory() {
       var selfS  = selfScoresData  && selfScoresData[si]  ? (selfScoresData[si][ii]  || '—') : '—';
       var sS     = sScoresData     && sScoresData[si]     ? (sScoresData[si][ii]     || '—') : '—';
       var finalS = finalScoresData && finalScoresData[si] ? (finalScoresData[si][ii] || '—') : '—';
-      var diff   = (typeof sS === 'number' && typeof finalS === 'number')
-                   ? (finalS - sS) : null;
+      var diff   = (typeof finalS === 'number')
+                   ? (typeof sS === 'number' ? (finalS - sS)
+                      : (u.skipSLevel && typeof selfS === 'number' ? (finalS - selfS) : null))
+                   : null;
       var diffHtml = diff !== null
         ? '<span style="color:' + (diff>0?'#1e8449':diff<0?'#e74c3c':'var(--text-muted)') + ';font-weight:600;">'
           + (diff>0?'+':'') + diff + '</span>'
@@ -4437,10 +4489,14 @@ function saveProposalForm() {
       ? empName + ' มีข้อเสนออยู่แล้ว ต้องการเขียนทับด้วยข้อมูลใหม่หรือไม่?'
       : empName + ' already has a proposal. Overwrite with new data?';
     if (!confirm(confirmMsg)) return;
-    proposalStore = proposalStore.filter(function(x){ return x.emp_id !== currentProposalEmpId; });
   }
   gasRun('saveProposal', data).then(function(r) {
     if (r && r.ok) {
+      // อัปเดต proposalStore ทันทีโดยไม่ต้อง reload หน้า
+      var newEntry = Object.assign({}, data, { id: r.id, created_at: new Date().toISOString() });
+      proposalStore = proposalStore.filter(function(x){ return x.emp_id !== currentProposalEmpId; });
+      proposalStore.push(newEntry);
+      renderProposalList();
       showToast(currentLang === 'th' ? 'บันทึกเรียบร้อย' : 'Saved successfully', 'success');
     }
   }).catch(function(e) {
