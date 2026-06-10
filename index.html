@@ -684,6 +684,8 @@ textarea{resize:vertical;min-height:70px;}
               <option value="">ทั้งหมด</option>
               <option value="final">มี Final Score</option>
               <option value="no-final">ยังไม่มี Final</option>
+              <option value="no-slevel">ยังไม่มี S-Level Score</option>
+              <option value="no-final-eval">ยังไม่ผ่าน Final Eval</option>
             </select>
           </div>
           <button onclick="resetReportFilters()" class="btn btn-sm btn-outline" style="font-size:12px;">✕ ล้าง Filter</button>
@@ -692,6 +694,21 @@ textarea{resize:vertical;min-height:70px;}
         <div class="emp-table-wrap">
           <div id="report-table-wrap"></div>
         </div>
+      </div>
+      <div class="card" id="slevel-pending-card">
+        <div class="card-header">
+          <div class="card-title">📋 ผู้ประเมินที่ยังค้างอยู่ / Pending Evaluators</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:12px;">
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('tab-slevel').style.display='block';document.getElementById('tab-final').style.display='none';this.classList.add('active');document.getElementById('btn-final-tab').classList.remove('active');" id="btn-slevel-tab" style="font-size:12px;">
+            S-Level <span id="slevel-pending-count" style="background:#fee2e2;color:#b91c1c;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:11px;"></span>
+          </button>
+          <button class="btn btn-sm btn-outline" onclick="document.getElementById('tab-final').style.display='block';document.getElementById('tab-slevel').style.display='none';this.classList.add('active');document.getElementById('btn-slevel-tab').classList.remove('active');" id="btn-final-tab" style="font-size:12px;">
+            Final <span id="final-pending-count" style="background:#fee2e2;color:#b91c1c;border-radius:10px;padding:1px 7px;margin-left:4px;font-size:11px;"></span>
+          </button>
+        </div>
+        <div id="tab-slevel"><div id="slevel-pending-body"></div></div>
+        <div id="tab-final" style="display:none;"><div id="final-pending-body"></div></div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-title" id="t-grade-dist">การกระจายตัวเกรด</div></div>
@@ -2960,6 +2977,98 @@ function resetReportFilters() {
   renderHrReport();
 }
 
+
+// ── S-LEVEL & FINAL PENDING REPORT ──────────────────────────────
+function buildPendingTable(pendingMap, idField, labelPending) {
+  var ids = Object.keys(pendingMap);
+  var tableBody = ids.map(function(evId) {
+    var ev = USERS[evId] || {};
+    var pendingEmps = pendingMap[evId];
+    var empNames = pendingEmps.map(function(id) {
+      var u = USERS[id] || {};
+      return '<span style="display:inline-block;background:#fee2e2;color:#b91c1c;border-radius:4px;padding:2px 8px;font-size:12px;margin:2px;">' +
+        (u.name ? u.name[currentLang] || u.name.th : id) + '</span>';
+    }).join(' ');
+    return '<tr style="border-bottom:1px solid var(--border);">' +
+      '<td style="padding:8px 12px;font-weight:600;">' + userName(ev) + '</td>' +
+      '<td style="padding:8px 12px;font-size:12px;color:var(--text-muted);">' + (ev.dept ? ev.dept[currentLang] || ev.dept.th : '—') + '</td>' +
+      '<td style="padding:8px 12px;text-align:center;">' +
+        '<span style="background:#fee2e2;color:#b91c1c;border-radius:12px;padding:2px 10px;font-size:12px;font-weight:700;">' +
+        pendingEmps.length + ' ' + (currentLang==='th'?'คน':'pax') + '</span></td>' +
+      '<td style="padding:8px 12px;">' + empNames + '</td></tr>';
+  }).join('');
+
+  return '<div style="overflow-x:auto;">' +
+    '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+    '<thead><tr style="background:var(--bg);border-bottom:2px solid var(--border);">' +
+    '<th style="padding:8px 12px;text-align:left;">' + idField + '</th>' +
+    '<th style="padding:8px 12px;text-align:left;">' + (currentLang==='th'?'ฝ่าย':'Dept') + '</th>' +
+    '<th style="padding:8px 12px;text-align:center;">' + (currentLang==='th'?'ค้างอยู่':'Pending') + '</th>' +
+    '<th style="padding:8px 12px;text-align:left;">' + labelPending + '</th>' +
+    '</tr></thead><tbody>' + tableBody + '</tbody></table></div>';
+}
+
+function renderSLevelPending() {
+  var body  = document.getElementById('slevel-pending-body');
+  var count = document.getElementById('slevel-pending-count');
+  if (!body) return;
+
+  // หา S-Level ทุกคนที่มีลูกน้องอย่างน้อย 1 คน
+  var supervisorMap = {}; // supId → [empId ที่ยังไม่มี sTotal]
+
+  Object.keys(USERS).forEach(function(empId) {
+    var u = USERS[empId];
+    if (!u || u.inactive || !u.supervisorId) return;
+    var e = evalStore[empId] || {};
+    if (!e.sTotal) {
+      // พนักงานคนนี้ยังไม่ถูก S-Level ประเมิน
+      if (!supervisorMap[u.supervisorId]) supervisorMap[u.supervisorId] = [];
+      supervisorMap[u.supervisorId].push(empId);
+    }
+  });
+
+  var supIds = Object.keys(supervisorMap);
+  if (count) count.textContent = supIds.length + ' คน / ' + supIds.length + ' people';
+
+  if (!supIds.length) {
+    body.innerHTML = '<p style="color:var(--success);padding:12px;font-size:14px;">✅ ' +
+      (currentLang==='th' ? 'S-Level ทุกคนประเมินลูกน้องครบแล้ว' : 'All S-Level evaluators have completed their evaluations.') +
+      '</p>';
+    return;
+  }
+
+  var cntEl = document.getElementById('slevel-pending-count');
+  if (cntEl) cntEl.textContent = supIds.length || '';
+  body.innerHTML = supIds.length
+    ? buildPendingTable(supervisorMap, 'S-Level', currentLang==='th'?'พนักงานที่รอ':'Pending Employees')
+    : '<p style="color:var(--success);padding:12px;font-size:14px;">✅ ' + (currentLang==='th'?'S-Level ทุกคนประเมินลูกน้องครบแล้ว':'All S-Level evaluators completed.') + '</p>';
+}
+
+// ── FINAL PENDING ─────────────────────────────────────────────────
+function renderFinalPending() {
+  var body  = document.getElementById('final-pending-body');
+  var cntEl = document.getElementById('final-pending-count');
+  if (!body) return;
+
+  var finalMap = {}; // finalId → [empId ที่ยังไม่มี finalTotal]
+  Object.keys(USERS).forEach(function(empId) {
+    var u = USERS[empId];
+    if (!u || u.inactive || !u.finalId) return;
+    var e = evalStore[empId] || {};
+    if (!e.finalTotal) {
+      if (!finalMap[u.finalId]) finalMap[u.finalId] = [];
+      finalMap[u.finalId].push(empId);
+    }
+  });
+
+  var finalIds = Object.keys(finalMap);
+  if (cntEl) cntEl.textContent = finalIds.length || '';
+  body.innerHTML = finalIds.length
+    ? buildPendingTable(finalMap, 'Final Evaluator', currentLang==='th'?'พนักงานที่รอ':'Pending Employees')
+    : '<p style="color:var(--success);padding:12px;font-size:14px;">✅ ' + (currentLang==='th'?'Final Evaluator ทุกคนประเมินครบแล้ว':'All Final evaluators completed.') + '</p>';
+}
+// ─────────────────────────────────────────────────────────────────
+
 function renderHrReport(){
   // Populate filter dropdowns
   var levelSel = document.getElementById('report-filter-level');
@@ -3021,6 +3130,8 @@ function renderHrReport(){
     if (filterDept && (!u.dept || u.dept.th !== filterDept)) return;
     if (filterStatus === 'final' && !e.finalTotal) return;
     if (filterStatus === 'no-final' && e.finalTotal) return;
+    if (filterStatus === 'no-slevel' && e.sTotal) return;
+    if (filterStatus === 'no-final-eval' && e.finalTotal) return;
 
     if (!levelGroups[lk]) levelGroups[lk] = [];
     levelGroups[lk].push(id);
@@ -3029,7 +3140,10 @@ function renderHrReport(){
 
   // Update count display
   var countEl = document.getElementById('report-count');
-  if (countEl) countEl.textContent = (currentLang==='th'?'แสดง ':'Showing ') + totalCount + (currentLang==='th'?' คน':' employees');
+
+  // render S-Level pending summary
+  renderSLevelPending();
+  renderFinalPending();  if (countEl) countEl.textContent = (currentLang==='th'?'แสดง ':'Showing ') + totalCount + (currentLang==='th'?' คน':' employees');
 
   var html = '';
 
