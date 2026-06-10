@@ -1565,15 +1565,21 @@ function syncEval(empId, retryCount) {
   gasRun('saveEval', payload).then(function(r) {
     if (!r || !r.ok) {
       if (retryCount < 3) {
-        // retry อัตโนมัติ หลังรอ 3 วิ
         setTimeout(function() { syncEval(empId, retryCount + 1); }, 3000);
         if (retryCount === 0) showToast(currentLang==='th'?'⏳ กำลังบันทึก...':'⏳ Saving...');
       } else {
         showToast(currentLang==='th'?'⚠️ บันทึกไม่สำเร็จ กรุณาลองใหม่':'⚠️ Save failed. Please try again.', 'error');
       }
     }
-  }).catch(function() {
-    if (retryCount < 3) {
+  }).catch(function(err) {
+    var msg = err && err.message ? err.message : '';
+    if (msg.indexOf('SELF DEADLINE') !== -1) {
+      showToast(currentLang==='th'?'🔒 เลย Deadline Self Eval แล้ว — ไม่บันทึก':'🔒 Self Eval deadline passed — not saved.', 'error');
+    } else if (msg.indexOf('S-LEVEL DEADLINE') !== -1) {
+      showToast(currentLang==='th'?'🔒 เลย Deadline S-Level แล้ว — ไม่บันทึก':'🔒 S-Level deadline passed — not saved.', 'error');
+    } else if (msg.indexOf('FINAL DEADLINE') !== -1) {
+      showToast(currentLang==='th'?'🔒 เลย Deadline Final แล้ว — ไม่บันทึก':'🔒 Final deadline passed — not saved.', 'error');
+    } else if (retryCount < 3) {
       setTimeout(function() { syncEval(empId, retryCount + 1); }, 3000);
     } else {
       showToast(currentLang==='th'?'⚠️ บันทึกไม่สำเร็จ กรุณาลองใหม่':'⚠️ Save failed. Please try again.', 'error');
