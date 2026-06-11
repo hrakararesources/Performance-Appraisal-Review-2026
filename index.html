@@ -340,7 +340,7 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span data-th="ผลการประเมินของฉัน" data-en="My Results">ผลการประเมินของฉัน</span>
       </div>
-      <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');loadProposals();">
+      <div class="nav-item" id="nav-proposals-final" style="display:none;" onclick="showPage('page-hr-proposals');renderProposalList();loadProposalsBackground();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-th="เสนอพิจารณา" data-en="Recommendations">เสนอพิจารณา</span>
       </div>
@@ -378,7 +378,7 @@ textarea{resize:vertical;min-height:70px;}
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
         <span data-th="รายงาน" data-en="Reports">รายงาน</span>
       </div>
-      <div class="nav-item" onclick="showPage('page-hr-proposals');loadProposals();">
+      <div class="nav-item" onclick="showPage('page-hr-proposals');renderProposalList();loadProposalsBackground();">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
         <span data-th="เสนอพิจารณา" data-en="Recommendations">เสนอพิจารณา</span>
       </div>
@@ -1313,10 +1313,10 @@ var SUBS_FINAL      = {};  // finalId      → [empId, ...]   (Final ใช้)
 // Helper: รายชื่อลูกน้องตาม role ของ currentUser
 function getMySubordinates(user) {
   if (!user) return [];
-  var list = user.isFinal
-    ? (SUBS_FINAL[user.id] || [])
-    : (SUBS_SUPERVISOR[user.id] || []);
-  return list.filter(function(id){ return USERS[id] && !USERS[id].inactive; });
+  var supList   = SUBS_SUPERVISOR[user.id] || [];
+  var finalList = user.isFinal ? (SUBS_FINAL[user.id] || []) : [];
+  var combined  = supList.concat(finalList.filter(function(id){ return supList.indexOf(id) < 0; }));
+  return combined.filter(function(id){ return USERS[id] && !USERS[id].inactive; });
 }
 
 // SUBORDINATES (legacy — ยังคงไว้เพื่อ backward compat กับโค้ดบางส่วน)
@@ -1757,7 +1757,7 @@ function setupSidebar(){
   document.getElementById('nav-hr').style.display=u.isHR?'':'none';
   var navPF=document.getElementById('nav-proposals-final'); if(navPF) navPF.style.display=(u.isFinal&&!u.isHR)?'':'none';
   var navRF=document.getElementById('nav-report-final'); if(navRF) navRF.style.display=(u.isFinal&&!u.isHR)?'':'none';
-  const subs=SUBORDINATES[u.id]||[];
+  const subs=getMySubordinates(u);
   const navOthers=document.getElementById('nav-eval-others');
   if(navOthers){navOthers.style.display=subs.length>0?'':'none';
     const cnt=document.getElementById('nav-sub-count');if(cnt&&subs.length>0){cnt.textContent=subs.length;cnt.style.display='';}}
@@ -1966,6 +1966,18 @@ function renderProposalList() {
   wrap.querySelectorAll('[data-propdelete]').forEach(function(b){ b.textContent = currentLang==='th'?'ยกเลิก':'Cancel'; });
 }
 
+
+// โหลด proposals ใน background แล้ว refresh ถ้ามีการเปลี่ยนแปลง
+async function loadProposalsBackground() {
+  try {
+    var res = await gasRun('getProposals');
+    if (res && res.proposals) {
+      proposalStore = res.proposals;
+      if (currentPage === 'page-hr-proposals') renderProposalList();
+    }
+  } catch(e) {}
+}
+
 async function loadProposals() {
 
   try {
@@ -2040,6 +2052,14 @@ function showProposalDetail(propId) {
     ]);
   }
 
+  // ── Special Adjust จาก Final Evaluator
+  var eData = evalStore[p.emp_id] || {};
+  if (eData.specialAdj) {
+    html += sec('Special Adjustment (Final Evaluator)',[
+      [currentLang==='th'?'ปรับพิเศษ':'Special Adjust', eData.specialAdj ? (currentLang==='th'?'✅ ใช่':'✅ Yes') : (currentLang==='th'?'ไม่':'No')],
+      [currentLang==='th'?'เหตุผลการปรับพิเศษ':'Reason', eData.specialReason||'—'],
+    ]);
+  }
   body.innerHTML = html;
   document.getElementById('modal-proposal-detail').classList.remove('hidden');
 }
@@ -2639,6 +2659,7 @@ function renderEvalOthers(){
     const eData = evalStore[sid] || {};
     const selfDone = !!eData.selfTotal;
     const myDone   = currentUser.isFinal ? !!eData.finalTotal : !!eData.sTotal;
+    const isFinalSub = (SUBS_FINAL[currentUser.id]||[]).indexOf(sid) >= 0;
     const evalBtn  = currentUser.isFinal
       ? (!!eData.sTotal || isSLevelLocked() || !!sub.skipSLevel)
       : (selfDone || isSelfLocked());
@@ -2656,7 +2677,7 @@ function renderEvalOthers(){
       <td><span class="badge badge-blue">${sub.level}</span></td>
       <td>${selfBadge}</td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}')" ${evalBtn?'':'disabled'}>
+        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}', false, '${isFinalSub?'final':'slevel'}')" ${evalBtn?'':'disabled'}>
           ${myDone ? (currentLang==='th'?'ดูผล':'View') : (currentLang==='th'?'ประเมิน':'Evaluate')}
         </button>
         ${proposeBtn}
@@ -2668,7 +2689,8 @@ function renderEvalOthers(){
     <th>${t('th-pos')}</th><th>Level</th><th>Self</th><th></th>
   </tr></thead><tbody>${rows.join('')}</tbody></table>`;
 }
-function openSubEval(subId, readOnly){
+function openSubEval(subId, readOnly, evalMode){
+  window._evalMode = evalMode || (currentUser && currentUser.isFinal ? 'final' : 'slevel');
   window._subReadOnly = (readOnly === true || readOnly === 'true');
   currentSubId=subId;
   const sub=USERS[subId];const eData=evalStore[subId]||{};
@@ -2679,7 +2701,7 @@ function openSubEval(subId, readOnly){
   var submitBtn = document.getElementById('t-sub-submit-btn');
   var cancelBtn = document.getElementById('t-sub-cancel-btn') || document.querySelector('#page-eval-sub .btn-outline');
   if (submitBtn) {
-    var isLocked = currentUser.isFinal ? isFinalLocked() : isSLevelLocked();
+    var isLocked = (window._evalMode==='final') ? isFinalLocked() : isSLevelLocked();
     if (window._subReadOnly) {
       submitBtn.style.display = 'none';
     } else if (isLocked) {
@@ -2701,7 +2723,7 @@ function openSubEval(subId, readOnly){
   var commentEl = document.getElementById('sub-comment-text');
   if(commentEl) {
     var eData2 = evalStore[subId] || {};
-    commentEl.value = currentUser.isFinal ? (eData2.finalComment||'') : (eData2.sComment||'');
+    commentEl.value = (window._evalMode==='final') ? (eData2.finalComment||'') : (eData2.sComment||'');
   }
   if(currentUser.isFinal && eData.finalScores && Object.keys(eData.finalScores).length>0) {
     subScores = JSON.parse(JSON.stringify(eData.finalScores));
@@ -2750,7 +2772,7 @@ function submitSubEval(){
   var commentEl=document.getElementById('sub-comment-text');
   var commentText=commentEl?commentEl.value.trim():'';
   const score=calcScore(sub.level,subScores);initEmpStore(currentSubId);
-  if(currentUser.isFinal){
+  if(window._evalMode==='final'){
     evalStore[currentSubId].finalScores=JSON.parse(JSON.stringify(subScores));
     evalStore[currentSubId].finalTotal=score;
     if(commentText) evalStore[currentSubId].finalComment=commentText;
