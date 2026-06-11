@@ -1757,7 +1757,7 @@ function setupSidebar(){
   document.getElementById('nav-hr').style.display=u.isHR?'':'none';
   var navPF=document.getElementById('nav-proposals-final'); if(navPF) navPF.style.display=(u.isFinal&&!u.isHR)?'':'none';
   var navRF=document.getElementById('nav-report-final'); if(navRF) navRF.style.display=(u.isFinal&&!u.isHR)?'':'none';
-  const subs=getMySubordinates(u);
+  const subs=SUBORDINATES[u.id]||[];
   const navOthers=document.getElementById('nav-eval-others');
   if(navOthers){navOthers.style.display=subs.length>0?'':'none';
     const cnt=document.getElementById('nav-sub-count');if(cnt&&subs.length>0){cnt.textContent=subs.length;cnt.style.display='';}}
@@ -2658,9 +2658,12 @@ function renderEvalOthers(){
     const sub   = USERS[sid];
     const eData = evalStore[sid] || {};
     const selfDone = !!eData.selfTotal;
-    const myDone   = currentUser.isFinal ? !!eData.finalTotal : !!eData.sTotal;
     const isFinalSub = (SUBS_FINAL[currentUser.id]||[]).indexOf(sid) >= 0;
-    const evalBtn  = currentUser.isFinal
+    const isSlevelSub = (SUBS_SUPERVISOR[currentUser.id]||[]).indexOf(sid) >= 0;
+    // myDone: Final sub → finalTotal, S-Level sub → sTotal
+    const myDone = isFinalSub ? !!eData.finalTotal : !!eData.sTotal;
+    // evalBtn: กลุ่ม A (S-Level sub) → รอ selfDone, กลุ่ม B (Final sub) → รอ sTotal
+    const evalBtn = isFinalSub
       ? (!!eData.sTotal || isSLevelLocked() || !!sub.skipSLevel)
       : (selfDone || isSelfLocked());
     const proposeBtn = currentUser.isFinal
@@ -2677,7 +2680,7 @@ function renderEvalOthers(){
       <td><span class="badge badge-blue">${sub.level}</span></td>
       <td>${selfBadge}</td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}', false, '${isFinalSub?'final':'slevel'}')" ${evalBtn?'':'disabled'}>
+        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}', false, isFinalSub?'final':'slevel')" ${evalBtn?'':'disabled'}>
           ${myDone ? (currentLang==='th'?'ดูผล':'View') : (currentLang==='th'?'ประเมิน':'Evaluate')}
         </button>
         ${proposeBtn}
