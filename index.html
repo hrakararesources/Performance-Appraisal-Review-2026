@@ -2564,7 +2564,7 @@ function secLabel(sec){return sec.name?sec.name[currentLang]||sec.name.th:'';}
 function buildEvalSections(containerId,lk,scoresObj,prefix){
   const container=document.getElementById(containerId);container.innerHTML='';
   const isLocked = prefix==='self' ? isSelfLocked()
-    : (currentUser && currentUser.isFinal ? isFinalLocked() : isSLevelLocked());
+    : (((window._evalMode||'') === 'final') ? isFinalLocked() : isSLevelLocked());
   EVAL_DATA[lk].sections.forEach((sec,si)=>{
     if(!scoresObj[si])scoresObj[si]={};
     const secEl=document.createElement('div');secEl.className='eval-section';
@@ -2598,7 +2598,7 @@ function selectScoreItem(prefix,si,ii,score,lk){
     return;
   }
   if(prefix==='sub'){
-    var locked = currentUser && currentUser.isFinal ? isFinalLocked() : isSLevelLocked();
+    var locked = ((window._evalMode||'') === 'final') ? isFinalLocked() : isSLevelLocked();
     if(locked){
       showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
       return;
@@ -2680,7 +2680,7 @@ function renderEvalOthers(){
       <td><span class="badge badge-blue">${sub.level}</span></td>
       <td>${selfBadge}</td>
       <td>
-        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}', false, isFinalSub?'final':'slevel')" ${evalBtn?'':'disabled'}>
+        <button class="btn btn-sm btn-primary" onclick="openSubEval('${sid}', false, '${isFinalSub?`final`:`slevel`}')" ${evalBtn?'':'disabled'}>
           ${myDone ? (currentLang==='th'?'ดูผล':'View') : (currentLang==='th'?'ประเมิน':'Evaluate')}
         </button>
         ${proposeBtn}
@@ -2728,17 +2728,20 @@ function openSubEval(subId, readOnly, evalMode){
     var eData2 = evalStore[subId] || {};
     commentEl.value = (window._evalMode==='final') ? (eData2.finalComment||'') : (eData2.sComment||'');
   }
-  if(currentUser.isFinal && eData.finalScores && Object.keys(eData.finalScores).length>0) {
-    subScores = JSON.parse(JSON.stringify(eData.finalScores));
-  } else if(currentUser.isFinal && eData.sScores) {
-    subScores = JSON.parse(JSON.stringify(eData.sScores));
-  } else if(currentUser.isFinal && sub.skipSLevel && eData.selfScores) {
-    // ไม่มี S-Level เพราะถูก skip → ใช้ selfScores เป็นจุดเริ่มต้น
-    subScores = JSON.parse(JSON.stringify(eData.selfScores));
-  } else if(!currentUser.isFinal && eData.selfScores) {
-    subScores = JSON.parse(JSON.stringify(eData.selfScores));
+  // โหลด scores ตาม evalMode (final/slevel) ไม่ใช่ isFinal เพื่อรองรับคนที่เป็นทั้งสองบทบาท
+  if(window._evalMode==='final') {
+    if(eData.finalScores && Object.keys(eData.finalScores).length>0) {
+      subScores = JSON.parse(JSON.stringify(eData.finalScores));
+    } else if(eData.sScores) {
+      subScores = JSON.parse(JSON.stringify(eData.sScores));
+    } else if(sub.skipSLevel && eData.selfScores) {
+      subScores = JSON.parse(JSON.stringify(eData.selfScores));
+    } else {
+      subScores = {};
+    }
   } else {
-    subScores = {};
+    // slevel mode: เริ่มจาก selfScores
+    subScores = eData.selfScores ? JSON.parse(JSON.stringify(eData.selfScores)) : {};
   }
   document.getElementById('sub-eval-name').textContent=userName(sub);
   document.getElementById('sub-eval-label').textContent=(""+(sub.level)+"");
@@ -2762,11 +2765,11 @@ function openSubEval(subId, readOnly, evalMode){
 }
 function toggleSpecialReason(){const c=document.getElementById('chk-special');document.getElementById('special-reason-box').style.display=c.checked?'block':'none';}
 function submitSubEval(){
-  if (currentUser.isFinal && isFinalLocked()) {
+  if (window._evalMode==='final' && isFinalLocked()) {
     showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
     return;
   }
-  if (!currentUser.isFinal && isSLevelLocked()) {
+  if (window._evalMode!=='final' && isSLevelLocked()) {
     showToast(currentLang==='th'?'เลย Deadline แล้ว ไม่สามารถแก้ไขได้':'Deadline passed. Editing is locked.');
     return;
   }
@@ -2800,7 +2803,11 @@ function submitSubEval(){
   syncEval(currentSubId);
   if (currentUser.isFinal) {
     var mySubs = getMySubordinates(currentUser).filter(function(sid){ return USERS[sid] && !USERS[sid].inactive; });
-    var allDone = mySubs.length > 0 && mySubs.every(function(sid){ return evalStore[sid] && evalStore[sid].finalTotal; });
+    // allDone: Final sub ต้องมี finalTotal, S-Level sub ต้องมี sTotal
+    var allDone = mySubs.length > 0 && mySubs.every(function(sid){
+      var isFSub = (SUBS_FINAL[currentUser.id]||[]).indexOf(sid) >= 0;
+      return evalStore[sid] && (isFSub ? evalStore[sid].finalTotal : evalStore[sid].sTotal);
+    });
     if (allDone) {
       var msg = currentLang==='th'?'ประเมินพนักงานในสังกัดครบทุกคนแล้ว\nต้องการส่งแจ้งเตือนไปยัง HR หรือไม่?':'All subordinates evaluated.\nNotify HR?';
       if (confirm(msg)) {
