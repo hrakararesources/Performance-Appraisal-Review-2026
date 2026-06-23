@@ -663,6 +663,7 @@ textarea{resize:vertical;min-height:70px;}
           <div style="display:flex;gap:8px;">
             <button class="btn btn-sm btn-outline" onclick="exportReport()">⬇ Export CSV</button>
             <button class="btn btn-sm btn-accent" onclick="exportReportExcel()">⬇ Export Excel</button>
+            <button class="btn btn-sm" style="background:#e67e22;color:white;" onclick="exportFinalEvalForm()">📋 Export แบบฟอร์ม Final (รายบุคคล)</button>
           </div>
         </div>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;align-items:center;">
@@ -2666,7 +2667,7 @@ function renderEvalOthers(){
     const evalBtn = isFinalSub
       ? (!!eData.sTotal || isSLevelLocked() || !!sub.skipSLevel)
       : (selfDone || isSelfLocked());
-    const proposeBtn = currentUser.isFinal
+    const proposeBtn = isFinalSub
       ? `<button class="btn btn-sm" style="background:#e67e22;color:white;font-size:11px;margin-left:4px;" onclick="openProposalForm('${sid}')">${currentLang==='th'?'เสนอปรับ':'Propose'}</button>`
       : '';
     const selfBadge = (selfDone || isDeadlinePassed()) && (currentUser.isFinal ? (eData.sTotal || isSLevelDeadlinePassed() || !!sub.skipSLevel) : true)
@@ -3265,6 +3266,113 @@ function renderHrReport(){
 
   wrap.innerHTML = html;
 }
+
+
+// ── EXPORT แบบฟอร์มประเมิน Final (Excel) — แยกตาม Final Evaluator ──
+function exportFinalEvalForm() {
+  if (typeof XLSX === 'undefined') {
+    showToast('กำลังโหลด SheetJS...', '');
+    setTimeout(exportFinalEvalForm, 1500);
+    return;
+  }
+
+  function cs(fg, fc, bold, wrap, ha, sz) {
+    return {
+      font: {bold:!!bold, color:{rgb:fc||'1A1A2E'}, name:'Arial', sz:sz||10},
+      fill: fg ? {patternType:'solid', fgColor:{rgb:fg}} : {},
+      alignment: {horizontal:ha||'left', vertical:'center', wrapText:!!wrap},
+      border: {top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}},
+               left:{style:'thin',color:{rgb:'CCCCCC'}},right:{style:'thin',color:{rgb:'CCCCCC'}}}
+    };
+  }
+  function setCell(ws, r, c, val, style) {
+    var ref = XLSX.utils.encode_cell({r:r, c:c});
+    ws[ref] = {v:val, t:typeof val==='number'?'n':'s', s:style};
+  }
+
+  var finalMap = {};
+  Object.keys(USERS).forEach(function(empId) {
+    var u = USERS[empId];
+    if (!u || u.inactive || !u.finalId) return;
+    var e = evalStore[empId] || {};
+    if (!e.finalTotal) {
+      if (!finalMap[u.finalId]) finalMap[u.finalId] = [];
+      finalMap[u.finalId].push(empId);
+    }
+  });
+
+  var finalIds = Object.keys(finalMap);
+  if (!finalIds.length) {
+    showToast(currentLang==='th'?'ไม่มีพนักงานที่รอ Final ประเมิน':'No employees pending Final evaluation','success');
+    return;
+  }
+
+  var wb = {SheetNames:[], Sheets:{}};
+
+  finalIds.forEach(function(finalId) {
+    var finalUser = USERS[finalId] || {};
+    var empIds = finalMap[finalId];
+
+    empIds.forEach(function(empId) {
+      var u = USERS[empId];
+      var e = evalStore[empId] || {};
+      var lk = u.level;
+      var evalDef = EVAL_DATA[lk];
+      if (!evalDef) return;
+
+      var selfScores = e.selfScores || {};
+      var sScores    = e.sScores || {};
+
+      var ws = {};
+      var R = 0;
+
+      setCell(ws, R, 0, 'AKARA RESOURCES — แบบฟอร์มประเมินผล Final Evaluation 2026', cs('1B4BA8','FFFFFF',true,false,'left',13)); R++;
+      setCell(ws, R, 0, 'พนักงาน / Employee: ' + userName(u) + '  (' + empId + ')', cs(null,null,true)); R++;
+      setCell(ws, R, 0, 'ฝ่าย / Dept: ' + (u.dept?u.dept.th+' / '+u.dept.en:'—') + '   ตำแหน่ง / Position: ' + (u.position?u.position.th:'—'), cs()); R++;
+      setCell(ws, R, 0, 'Level: ' + (u.displayLevel||u.level) + '   Final Evaluator: ' + userName(finalUser), cs()); R++;
+      R++;
+
+      var headers = ['หัวข้อการประเมิน / Topic', 'น้ำหนัก%', 'Self Score', 'S-Level Score', 'Final Score (กรอก)', 'หมายเหตุ'];
+      headers.forEach(function(h, c) { setCell(ws, R, c, h, cs('1B4BA8','FFFFFF',true,true,'center')); });
+      R++;
+
+      evalDef.sections.forEach(function(sec, si) {
+        setCell(ws, R, 0, sec.name.th + ' / ' + sec.name.en, cs('F5B731','1A1A2E',true,true,'left'));
+        setCell(ws, R, 1, sec.pct + '%', cs('F5B731','1A1A2E',true,false,'center'));
+        for (var c=2;c<6;c++) setCell(ws, R, c, '', cs('F5B731'));
+        R++;
+
+        sec.items.forEach(function(item, ii) {
+          var selfVal = (selfScores[si] && selfScores[si][ii] !== undefined) ? selfScores[si][ii] : '';
+          var sVal    = (sScores[si]    && sScores[si][ii]    !== undefined) ? sScores[si][ii]    : '';
+          setCell(ws, R, 0, '  ' + item.th + ' / ' + item.en, cs(null,null,false,true));
+          setCell(ws, R, 1, '', cs());
+          setCell(ws, R, 2, selfVal, cs(null,'1565c0',false,false,'center'));
+          setCell(ws, R, 3, sVal, cs(null,'1565c0',false,false,'center'));
+          setCell(ws, R, 4, '', cs('FFF9E6',null,false,false,'center'));
+          setCell(ws, R, 5, '', cs());
+          R++;
+        });
+      });
+
+      R++;
+      setCell(ws, R, 0, 'ความเห็นของ Final Evaluator / Final Evaluator Comment:', cs(null,null,true)); R++;
+      setCell(ws, R, 0, '', cs()); R++;
+      setCell(ws, R, 0, '', cs()); R++;
+
+      ws['!cols'] = [{wch:45},{wch:10},{wch:11},{wch:13},{wch:15},{wch:20}];
+      ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0},e:{r:R,c:5}});
+
+      var sheetName = (empId + '_' + (u.name?u.name.th:'')).substring(0,31).replace(/[\[\]\*\/\\?:]/g,'');
+      wb.SheetNames.push(sheetName);
+      wb.Sheets[sheetName] = ws;
+    });
+  });
+
+  XLSX.writeFile(wb, 'Final_Eval_Forms_' + new Date().toISOString().slice(0,10) + '.xlsx');
+  showToast(currentLang==='th'?'Export สำเร็จ':'Export successful','success');
+}
+// ─────────────────────────────────────────────────────────────────
 
 function exportReportExcel() {
   if (typeof XLSX === 'undefined') {
@@ -4572,6 +4680,12 @@ function renderScoreHistory() {
 var currentProposalEmpId = null;
 
 function openProposalForm(empId) {
+  // Guard: ต้องเป็น Final ของพนักงานคนนี้เท่านั้นถึงเสนอพิจารณาได้
+  var isFinalOfThis = (SUBS_FINAL[currentUser.id]||[]).indexOf(empId) >= 0;
+  if (!isFinalOfThis) {
+    showToast(currentLang==='th'?'คุณไม่มีสิทธิ์เสนอพิจารณาพนักงานคนนี้':'You are not authorized to propose for this employee.');
+    return;
+  }
   currentProposalEmpId = empId;
   var u = USERS[empId];
   var eData = evalStore[empId] || {};
